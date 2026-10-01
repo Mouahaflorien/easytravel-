@@ -3,7 +3,12 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from travel.models import Departure, LineStop
-from accounts.validators import validate_cameroon_phone, validate_clean_email, validate_identity_info
+from accounts.validators import (
+    validate_cameroon_phone, 
+    validate_clean_email, 
+    validate_identity_info,
+    validate_passenger_name
+)
 from .models import Booking
 
 @login_required(login_url='accounts:login')
@@ -55,11 +60,10 @@ def book_departure(request, departure_id):
         }
         
         try:
-            # 1. Validation du Nom
-            if not name or len(name) < 3:
-                raise ValidationError("Le nom complet du passager est obligatoire (au moins 3 caractères).")
+            # 1. Validation stricte du Nom (état civil, au moins 2 mots, sans symboles/mots factices)
+            clean_name = validate_passenger_name(name)
                 
-            # 2. Validation stricte du téléphone camerounais
+            # 2. Validation stricte du téléphone (Cameroun ou international)
             clean_phone = validate_cameroon_phone(phone_raw)
             
             # 3. Validation stricte de l'email
@@ -82,7 +86,7 @@ def book_departure(request, departure_id):
                 departure=departure,
                 departure_stop=start_stop,
                 arrival_stop=end_stop,
-                traveler_name=name,
+                traveler_name=clean_name,
                 traveler_phone=clean_phone,
                 traveler_email=clean_email,
                 id_type=clean_id_type,

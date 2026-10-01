@@ -1,0 +1,60 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Vérification de votre compte - EasyTravel{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8 text-center">
+            
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 bg-white">
+                <div class="mb-4">
+                    <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary-subtle text-primary p-3 mb-2" style="width: 80px; height: 80px;">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <h3 class="fw-bold text-dark mb-2">Vérifiez votre boîte de réception</h3>
+                <p class="text-muted mb-4">
+                    Un e-mail d'authentification a été envoyé à l'adresse suivante :<br>
+                    <strong class="text-dark fs-6">{{ email|default:"votre adresse email" }}</strong>
+                </p>
+
+                <div class="alert alert-light border rounded-3 p-3 text-start small text-muted mb-4">
+                    <div class="d-flex align-items-start gap-2">
+                        <span class="text-primary fs-5">ℹ️</span>
+                        <div>
+                            <strong>Que devez-vous faire ?</strong><br>
+                            1. Ouvrez l'e-mail envoyé par <strong>EasyTravel</strong>.<br>
+                            2. Cliquez sur le lien <strong>« Activer mon compte »</strong>.<br>
+                            3. Votre profil sera instantanément validé et vous pourrez finaliser vos réservations.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-3 bg-light rounded-3 mb-4">
+                    <p class="small text-muted mb-2">Vous n'avez pas reçu l'email après quelques minutes ?</p>
+                    <form method="post" action="{% url 'accounts:resend_activation' %}" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="email" value="{{ email }}">
+                        <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold">
+                            Renvoyer le lien d'authentification
+                        </button>
+                    </form>
+                    <div class="small text-muted mt-2" style="font-size: 0.8rem;">
+                        Pensez également à vérifier vos dossiers <em>Spams</em> ou <em>Courriers indésirables</em>.
+                    </div>
+                </div>
+
+                <a href="{% url 'accounts:login' %}" class="btn btn-link text-decoration-none text-muted small">
+                    ← Retour à la page de connexion
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -354,7 +354,11 @@ class AgencyBookingForm(forms.ModelForm):
         departure_stop = cleaned_data.get('departure_stop')
         arrival_stop = cleaned_data.get('arrival_stop')
         seats = cleaned_data.get('seats_reserved') or 1
+        name = cleaned_data.get('traveler_name')
         phone = cleaned_data.get('traveler_phone')
+        email = cleaned_data.get('traveler_email')
+        id_type = cleaned_data.get('id_type')
+        id_number = cleaned_data.get('id_number')
 
         if departure:
             if departure.is_closed_for_sale():
@@ -366,10 +370,44 @@ class AgencyBookingForm(forms.ModelForm):
             if departure_stop.stop_order >= arrival_stop.stop_order:
                 self.add_error('arrival_stop', "L'arrêt d'arrivée doit être situé après l'arrêt de départ.")
 
+        from accounts.validators import (
+            validate_cameroon_phone, 
+            validate_passenger_name, 
+            validate_identity_info,
+            validate_clean_email
+        )
+
+        # 1. Validation du nom du voyageur
+        if name:
+            try:
+                cleaned_data['traveler_name'] = validate_passenger_name(name)
+            except forms.ValidationError as e:
+                self.add_error('traveler_name', e)
+
+        # 2. Validation du numéro de téléphone
         if phone:
-            from accounts.validators import validate_cameroon_phone
             try:
                 cleaned_data['traveler_phone'] = validate_cameroon_phone(phone)
             except forms.ValidationError as e:
                 self.add_error('traveler_phone', e)
+
+        # 3. Validation de l'email si renseigné
+        if email:
+            try:
+                cleaned_data['traveler_email'] = validate_clean_email(email)
+            except forms.ValidationError as e:
+                self.add_error('traveler_email', e)
+
+        # 4. Validation de la pièce d'identité
+        if id_type and id_number:
+            try:
+                c_type, c_number = validate_identity_info(id_type, id_number)
+                cleaned_data['id_type'] = c_type
+                cleaned_data['id_number'] = c_number
+            except forms.ValidationError as e:
+                self.add_error('id_number', e)
+        elif not id_number:
+            self.add_error('id_number', "Le numéro de pièce d'identité est obligatoire pour l'émission du titre de transport.")
+
         return cleaned_data
+

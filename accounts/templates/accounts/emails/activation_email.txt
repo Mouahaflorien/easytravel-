@@ -1,0 +1,13 @@
+Bienvenue sur EasyTravel, {{ user.first_name|default:user.username }} !
+
+Merci d'avoir créé votre compte voyageur sur EasyTravel.
+Pour valider votre adresse email et activer votre compte afin d'effectuer vos réservations en toute sécurité, veuillez ouvrir le lien suivant dans votre navigateur :
+
+{{ activation_url }}
+
+Ce lien est sécurisé, personnel et expire dans 24 heures.
+
+Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.
+
+L'équipe EasyTravel Cameroun - MS Logitech
+Support : {{ support_email }}

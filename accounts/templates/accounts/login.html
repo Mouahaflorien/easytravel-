@@ -66,7 +66,28 @@
                                 <p class="text-muted small">Accédez à vos billets et effectuez vos réservations</p>
                             </div>
 
-                            {% if login_error %}
+                            {% if login_error == "inactive_account" %}
+                            <div class="alert alert-warning border-0 rounded-4 p-3 small mb-4 shadow-sm text-start">
+                                <div class="d-flex align-items-center gap-2 mb-2 text-warning-emphasis fw-bold">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                    </svg>
+                                    <span>Compte en attente d'activation</span>
+                                </div>
+                                <p class="mb-2 text-muted">
+                                    Votre compte voyageur a été créé mais votre adresse email n'est pas encore vérifiée. Veuillez cliquer sur le lien d'authentification reçu par email pour l'activer.
+                                </p>
+                                <form method="post" action="{% url 'accounts:resend_activation' %}" class="d-flex align-items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="email" value="{{ unactivated_email }}">
+                                    <button type="submit" class="btn btn-warning btn-sm rounded-pill fw-bold px-3">
+                                        📩 Renvoyer le lien d'activation
+                                    </button>
+                                </form>
+                            </div>
+                            {% elif login_error %}
                             <div class="alert alert-danger border-0 rounded-3 py-2.5 small mb-3 d-flex align-items-center gap-2">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger flex-shrink-0">
                                     <circle cx="12" cy="12" r="10"></circle>
@@ -108,7 +129,7 @@
                         <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="register-pane" role="tabpanel">
                             <div class="text-center mb-4">
                                 <h4 class="fw-bold text-dark mb-1">Nouveau voyageur</h4>
-                                <p class="text-muted small">Créez votre profil officiel en 1 minute</p>
+                                <p class="text-muted small">Créez votre profil officiel — vérification par email requise</p>
                             </div>
 
                             {% if reg_error %}
@@ -122,61 +143,76 @@
                             </div>
                             {% endif %}
 
-                            <form method="post" action="{% url 'accounts:register' %}">
+                            <form method="post" action="{% url 'accounts:register' %}" id="registerForm">
                                 {% csrf_token %}
                                 <input type="hidden" name="next" value="{{ next }}">
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold small text-muted">Nom complet (selon pièce d'identité)</label>
-                                    <input type="text" name="full_name" class="form-control py-2 rounded-3" 
-                                           placeholder="ex: Paul Biya, Emmanuel Macron" value="{{ reg_data.full_name }}" required>
+                                    <label class="form-label fw-semibold small text-muted">Nom complet (selon pièce d'identité) <span class="text-danger">*</span></label>
+                                    <input type="text" name="full_name" id="regFullName" class="form-control py-2 rounded-3" 
+                                           placeholder="Ex: Kamgaing Jean-Paul (Nom et Prénom)" value="{{ reg_data.full_name }}" required>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Au moins 2 mots (Nom et Prénom d'état civil, sans chiffres).</small>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold small text-muted">Adresse Email (pour recevoir le billet)</label>
-                                    <input type="email" name="email" class="form-control py-2 rounded-3" 
+                                    <label class="form-label fw-semibold small text-muted">Adresse Email (pour recevoir le lien d'activation et vos billets) <span class="text-danger">*</span></label>
+                                    <input type="email" name="email" id="regEmail" class="form-control py-2 rounded-3" 
                                            placeholder="votre.email@domaine.com" value="{{ reg_data.email }}" required>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Un lien d'activation vous sera envoyé à cette adresse.</small>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold small text-muted">Numéro de téléphone</label>
+                                    <label class="form-label fw-semibold small text-muted">Numéro de téléphone <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <span class="input-group-text bg-light fw-bold text-dark" style="font-size: 0.85rem;">+237</span>
-                                        <input type="tel" name="phone" class="form-control py-2" 
+                                        <select id="regCountrySelect" class="form-select bg-light fw-medium border-end-0" style="max-width: 130px; font-size: 0.85rem;">
+                                            <option value="+237" selected>🇨🇲 +237</option>
+                                            <option value="+33">🇫🇷 +33</option>
+                                            <option value="+49">🇩🇪 +49</option>
+                                            <option value="other">🌐 Autre</option>
+                                        </select>
+                                        <input type="tel" name="phone" id="regPhoneInput" class="form-control py-2" 
                                                placeholder="6XX XX XX XX" value="{{ reg_data.phone }}" required>
                                     </div>
-                                    <small class="text-muted" style="font-size: 0.75rem;">Orange, MTN, Camtel ou Nexttel (9 chiffres).</small>
+                                    <small class="text-muted" id="regPhoneHelp" style="font-size: 0.75rem;">Numéro camerounais valide : 9 chiffres (Orange, MTN, Camtel, Nexttel).</small>
                                 </div>
 
                                 <div class="row g-2 mb-3">
                                     <div class="col-sm-5">
-                                        <label class="form-label fw-semibold small text-muted">Type de pièce</label>
-                                        <select name="id_type" class="form-select py-2 rounded-3" required>
+                                        <label class="form-label fw-semibold small text-muted">Type de pièce <span class="text-danger">*</span></label>
+                                        <select name="id_type" id="regIdType" class="form-select py-2 rounded-3" required>
                                             <option value="CNI" {% if reg_data.id_type == 'CNI' %}selected{% endif %}>CNI</option>
                                             <option value="PASSPORT" {% if reg_data.id_type == 'PASSPORT' %}selected{% endif %}>Passeport</option>
                                             <option value="RECEIPT" {% if reg_data.id_type == 'RECEIPT' %}selected{% endif %}>Récépissé</option>
                                         </select>
                                     </div>
                                     <div class="col-sm-7">
-                                        <label class="form-label fw-semibold small text-muted">Numéro de pièce</label>
-                                        <input type="text" name="id_number" class="form-control py-2 rounded-3" 
-                                               placeholder="ex: 1102938475" value="{{ reg_data.id_number }}" required>
+                                        <label class="form-label fw-semibold small text-muted">Numéro de pièce <span class="text-danger">*</span></label>
+                                        <input type="text" name="id_number" id="regIdNumber" class="form-control py-2 rounded-3 text-uppercase" 
+                                               placeholder="Ex: 1102938475" value="{{ reg_data.id_number }}" required>
                                     </div>
+                                </div>
+                                <div class="mb-3 text-muted small" id="regIdHelp" style="font-size: 0.75rem;">
+                                    CNI officielle : 9 à 11 caractères (ex: 102938475).
                                 </div>
 
                                 <div class="row g-2 mb-4">
                                     <div class="col-sm-6">
-                                        <label class="form-label fw-semibold small text-muted">Mot de passe</label>
+                                        <label class="form-label fw-semibold small text-muted">Mot de passe <span class="text-danger">*</span></label>
                                         <input type="password" name="password" class="form-control py-2 rounded-3" placeholder="6+ caractères" required>
                                     </div>
                                     <div class="col-sm-6">
-                                        <label class="form-label fw-semibold small text-muted">Confirmation</label>
+                                        <label class="form-label fw-semibold small text-muted">Confirmation <span class="text-danger">*</span></label>
                                         <input type="password" name="password_confirm" class="form-control py-2 rounded-3" placeholder="Répéter" required>
                                     </div>
                                 </div>
 
+                                <div class="alert alert-light border small text-muted rounded-3 p-2.5 mb-4 text-start d-flex align-items-center gap-2">
+                                    <span class="fs-5">📧</span>
+                                    <span>Après avoir cliqué, vous recevrez un <strong>lien d'authentification par email</strong> pour valider votre compte.</span>
+                                </div>
+
                                 <button type="submit" class="btn btn-brand w-100 py-3 rounded-pill fw-bold fs-6 d-flex align-items-center justify-content-center gap-2">
-                                    <span>Créer mon compte et continuer</span>
+                                    <span>Créer mon compte et valider par email</span>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="5" y1="12" x2="19" y2="12"></line>
                                         <polyline points="12 5 19 12 12 19"></polyline>
@@ -188,6 +224,59 @@
                     </div>
                 </div>
             </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Dynamisme du champ pièce d'identité
+                const idTypeSelect = document.getElementById('regIdType');
+                const idNumberInput = document.getElementById('regIdNumber');
+                const idHelp = document.getElementById('regIdHelp');
+
+                function updateIdHelp() {
+                    if (!idTypeSelect || !idNumberInput || !idHelp) return;
+                    const type = idTypeSelect.value;
+                    if (type === 'CNI') {
+                        idNumberInput.placeholder = 'Ex: 102938475';
+                        idHelp.textContent = 'CNI officielle : 9 à 11 caractères principalement numériques (ex: 102938475).';
+                    } else if (type === 'PASSPORT') {
+                        idNumberInput.placeholder = 'Ex: A1234567 ou 09AA12345';
+                        idHelp.textContent = 'Passeport officiel : 7 à 10 caractères comportant lettres et chiffres.';
+                    } else if (type === 'RECEIPT') {
+                        idNumberInput.placeholder = 'Ex: REC20260987 ou 1029384756';
+                        idHelp.textContent = 'Récépissé officiel délivré par la DGSN (au moins 8 caractères).';
+                    }
+                }
+
+                if (idTypeSelect) {
+                    idTypeSelect.addEventListener('change', updateIdHelp);
+                    updateIdHelp();
+                }
+
+                // Masque et indicatif téléphone
+                const countrySelect = document.getElementById('regCountrySelect');
+                const phoneInput = document.getElementById('regPhoneInput');
+                const phoneHelp = document.getElementById('regPhoneHelp');
+
+                if (countrySelect && phoneInput) {
+                    countrySelect.addEventListener('change', function() {
+                        if (this.value === '+237') {
+                            phoneInput.placeholder = '6XX XX XX XX';
+                            phoneHelp.textContent = 'Numéro camerounais valide : 9 chiffres (Orange: 69x/655-659, MTN: 67x/68x/650-654, Nexttel: 66x, Camtel: 62x).';
+                        } else if (this.value === '+33') {
+                            phoneInput.placeholder = '6 12 34 56 78';
+                            phoneHelp.textContent = 'Numéro français : 9 chiffres après +33 (ex: 6 12 34 56 78).';
+                        } else if (this.value === '+49') {
+                            phoneInput.placeholder = '176 3532 1633';
+                            phoneHelp.textContent = 'Numéro allemand : format après +49.';
+                        } else {
+                            phoneInput.placeholder = '+XXX XXXXXXXX';
+                            phoneHelp.textContent = 'Numéro international avec indicatif pays (+ suivi de 8 à 15 chiffres).';
+                        }
+                    });
+                }
+            });
+            </script>
+
 
             <!-- Note de confiance -->
             <div class="text-center text-muted small mt-4 d-flex align-items-center justify-content-center gap-1.5">

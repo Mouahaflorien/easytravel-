@@ -398,6 +398,7 @@
             phoneInput.addEventListener('input', applyPhoneMask);
             // 3. Validation en temps réel avec indicateur visuel (coche verte)
             const nameInput = document.getElementById('nameInput');
+            const idTypeSelect = document.getElementById('idTypeSelect');
             const idNumberInput = document.getElementById('idNumberInput');
             const emailInput = document.getElementById('emailInput');
             const nameHint = document.getElementById('nameValidHint');
@@ -417,37 +418,86 @@
                 }
             }
 
-            if (nameInput) {
-                nameInput.addEventListener('input', function() {
-                    validateField(this, this.value.trim().length >= 3, nameHint);
-                });
-                validateField(nameInput, nameInput.value.trim().length >= 3, nameHint);
+            // Validation Nom : au moins 2 mots de 2 lettres sans chiffres
+            function isNameValid(val) {
+                const trimmed = val.trim();
+                if (trimmed.length < 4) return false;
+                if (!/^[A-Za-zÀ-ÿ\s'-]+$/.test(trimmed)) return false;
+                const words = trimmed.split(/\s+/);
+                if (words.length < 2) return false;
+                return words.every(w => w.replace(/[^A-Za-zÀ-ÿ]/g, '').length >= 2);
             }
 
-            if (idNumberInput) {
-                idNumberInput.addEventListener('input', function() {
-                    validateField(this, this.value.trim().length >= 4, idHint);
+            if (nameInput) {
+                nameInput.addEventListener('input', function() {
+                    validateField(this, isNameValid(this.value), nameHint);
                 });
-                validateField(idNumberInput, idNumberInput.value.trim().length >= 4, idHint);
+                validateField(nameInput, isNameValid(nameInput.value), nameHint);
+            }
+
+            // Validation Pièce selon le type
+            function isIdValid(type, val) {
+                const clean = val.replace(/[\s\-]/g, '').toUpperCase();
+                if (clean.length < 6 || !/^[A-Z0-9]+$/.test(clean)) return false;
+                const uniqueChars = new Set(clean).size;
+                if (uniqueChars < 3) return false;
+                
+                if (type === 'CNI') {
+                    return clean.length >= 8 && clean.length <= 13 && (clean.replace(/\D/g, '').length >= 7);
+                } else if (type === 'PASSPORT') {
+                    return clean.length >= 7 && clean.length <= 12 && /[A-Z]/.test(clean) && /\d/.test(clean);
+                } else if (type === 'RECEIPT') {
+                    return clean.length >= 8 && clean.length <= 16;
+                }
+                return clean.length >= 6;
+            }
+
+            function updateIdPlaceholder() {
+                if (!idTypeSelect || !idNumberInput) return;
+                const t = idTypeSelect.value;
+                if (t === 'CNI') {
+                    idNumberInput.placeholder = 'ex: 102938475 (8 à 12 chiffres)';
+                } else if (t === 'PASSPORT') {
+                    idNumberInput.placeholder = 'ex: A1234567 ou 09AA12345';
+                } else if (t === 'RECEIPT') {
+                    idNumberInput.placeholder = 'ex: REC20260987 ou 1029384756';
+                }
+                validateField(idNumberInput, isIdValid(t, idNumberInput.value), idHint);
+            }
+
+            if (idTypeSelect && idNumberInput) {
+                idTypeSelect.addEventListener('change', updateIdPlaceholder);
+                idNumberInput.addEventListener('input', function() {
+                    validateField(this, isIdValid(idTypeSelect.value, this.value), idHint);
+                });
+                updateIdPlaceholder();
             }
 
             if (emailInput) {
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
                 emailInput.addEventListener('input', function() {
                     validateField(this, emailRegex.test(this.value.trim()), emailHint);
                 });
                 validateField(emailInput, emailRegex.test(emailInput.value.trim()), emailHint);
             }
 
+            function isPhoneValid(digits, country) {
+                if (new Set(digits).size < 4) return false;
+                if (country === '+237') {
+                    if (digits.length !== 9) return false;
+                    const p1 = digits.charAt(0);
+                    return p1 === '6' || p1 === '2';
+                }
+                return digits.length >= 8 && digits.length <= 15;
+            }
+
             if (phoneInput) {
                 phoneInput.addEventListener('input', function() {
                     let digits = this.value.replace(/\D/g, '');
-                    let isValid = (countrySelect.value === '+237') ? (digits.length === 9) : (digits.length >= 8);
-                    validateField(this, isValid, phoneHint);
+                    validateField(this, isPhoneValid(digits, countrySelect.value), phoneHint);
                 });
                 let initDigits = phoneInput.value.replace(/\D/g, '');
-                let isValid = (countrySelect.value === '+237') ? (initDigits.length === 9) : (initDigits.length >= 8);
-                validateField(phoneInput, isValid, phoneHint);
+                validateField(phoneInput, isPhoneValid(initDigits, countrySelect.value), phoneHint);
             }
 
             const bookingForm = document.getElementById('bookingForm');

@@ -4,7 +4,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
 from .models import User
-from .validators import validate_cameroon_phone, validate_clean_email, validate_identity_info
+from .validators import (
+    validate_cameroon_phone, 
+    validate_clean_email, 
+    validate_identity_info,
+    validate_passenger_name
+)
+from .services.email_service import send_account_activation_email, verify_activation_token
 from bookings.models import Booking
 
 def traveler_login(request):
@@ -16,6 +22,7 @@ def traveler_login(request):
         return redirect('accounts:my_bookings')
         
     login_error = None
+    unactivated_email = None
     
     if request.method == 'POST' and 'action_login' in request.POST:
         identifier = request.POST.get('identifier', '').strip()
@@ -23,23 +30,31 @@ def traveler_login(request):
         
         # Permettre la connexion par nom d'utilisateur ou par email
         user = None
+        candidate = None
         if '@' in identifier:
-            user_obj = User.objects.filter(email__iexact=identifier).first()
-            if user_obj:
-                user = authenticate(request, username=user_obj.username, password=password)
+            candidate = User.objects.filter(email__iexact=identifier).first()
         else:
-            user = authenticate(request, username=identifier, password=password)
+            candidate = User.objects.filter(username__iexact=identifier).first()
+
+        if candidate:
+            user = authenticate(request, username=candidate.username, password=password)
             
         if user is not None:
             login(request, user)
             messages.success(request, f"Ravi de vous revoir, {user.first_name or user.username} !")
             return redirect(next_url)
         else:
-            login_error = "Identifiant ou mot de passe incorrect."
+            # Vérifier si le compte existe avec le bon mot de passe mais n'est pas encore activé
+            if candidate and candidate.check_password(password) and not candidate.is_active:
+                login_error = "inactive_account"
+                unactivated_email = candidate.email
+            else:
+                login_error = "Identifiant ou mot de passe incorrect."
             
     return render(request, 'accounts/login.html', {
         'next': next_url,
         'login_error': login_error,
+        'unactivated_email': unactivated_email,
     })
 
 
@@ -61,21 +76,27 @@ def traveler_register(request):
         password_confirm = request.POST.get('password_confirm', '')
         
         try:
-            if not full_name:
-                raise ValidationError("Le nom complet est obligatoire.")
+            # 1. Validation rigoureuse du nom complet
+            clean_name = validate_passenger_name(full_name)
+
+            # 2. Validation du mot de passe
             if len(password) < 6:
                 raise ValidationError("Le mot de passe doit comporter au moins 6 caractères.")
             if password != password_confirm:
-                raise ValidationError("Les mots de passe ne correspondent pas.")
+                raise ValidationError("Les mots de passe saisis ne correspondent pas.")
                 
+            # 3. Validation de l'adresse email
             clean_email = validate_clean_email(email_raw)
             if User.objects.filter(email__iexact=clean_email).exists():
-                raise ValidationError("Cette adresse email est déjà associée à un compte.")
+                raise ValidationError("Cette adresse email est déjà associée à un compte EasyTravel.")
                 
+            # 4. Validation stricte du téléphone (Cameroun ou international)
             clean_phone = validate_cameroon_phone(phone_raw)
-            id_type, clean_id_number = validate_identity_info(id_type, id_number)
+
+            # 5. Validation rigoureuse de la pièce d'identité (CNI, Passeport, Récépissé)
+            clean_id_type, clean_id_number = validate_identity_info(id_type, id_number)
             
-            # Générer un username unique à partir de l'email
+            # Générer un nom d'utilisateur unique
             username_base = clean_email.split('@')[0]
             username = username_base
             count = 1
@@ -83,10 +104,11 @@ def traveler_register(request):
                 username = f"{username_base}{count}"
                 count += 1
                 
-            name_parts = full_name.split(' ', 1)
+            name_parts = clean_name.split(' ', 1)
             first_name = name_parts[0]
             last_name = name_parts[1] if len(name_parts) > 1 else ''
             
+            # Création du compte inactif en attente d'authentification par email
             user = User.objects.create_user(
                 username=username,
                 email=clean_email,
@@ -94,14 +116,17 @@ def traveler_register(request):
                 first_name=first_name,
                 last_name=last_name,
                 phone=clean_phone,
-                id_type=id_type,
+                id_type=clean_id_type,
                 id_number=clean_id_number,
-                role='traveler'
+                role='traveler',
+                is_active=False
             )
             
-            login(request, user)
-            messages.success(request, f"Votre compte voyageur a été créé avec succès ! Bienvenue, {first_name}.")
-            return redirect(next_url)
+            # Envoi du lien d'activation sécurisé par email
+            send_account_activation_email(request, user)
+            
+            request.session['activation_email'] = clean_email
+            return redirect('accounts:activation_pending')
             
         except ValidationError as e:
             reg_error = e.message if hasattr(e, 'message') else str(e)
@@ -112,6 +137,60 @@ def traveler_register(request):
         'active_tab': 'register',
         'reg_data': request.POST if request.method == 'POST' else {}
     })
+
+
+def activation_pending(request):
+    """
+    Affiche la page d'information invitant l'utilisateur à valider son email.
+    """
+    email = request.GET.get('email') or request.session.get('activation_email', '')
+    return render(request, 'accounts/activation_pending.html', {
+        'email': email
+    })
+
+
+def activate_account(request, uidb64, token):
+    """
+    Valide le jeton d'authentification reçu par email et active le compte voyageur.
+    """
+    user = verify_activation_token(uidb64, token)
+    
+    if user is not None:
+        user.is_active = True
+        user.save()
+        login(request, user)
+        messages.success(request, f"Félicitations {user.first_name or user.username} ! Votre compte est activé avec succès. Bienvenue sur EasyTravel.")
+        return redirect('accounts:my_bookings')
+    else:
+        return render(request, 'accounts/activation_invalid.html')
+
+
+def resend_activation(request):
+    """
+    Permet de renvoyer le lien d'activation par email si non reçu.
+    """
+    email = ''
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+    elif request.method == 'GET':
+        email = request.GET.get('email', '').strip() or request.session.get('activation_email', '')
+
+    if email:
+        user = User.objects.filter(email__iexact=email).first()
+        if user:
+            if user.is_active:
+                messages.info(request, "Ce compte est déjà actif. Vous pouvez vous connecter directement.")
+                return redirect('accounts:login')
+            else:
+                send_account_activation_email(request, user)
+                messages.success(request, f"Un nouvel email d'activation a été envoyé à {email}.")
+        else:
+            messages.info(request, f"Si un compte inactif est associé à {email}, un lien d'activation a été envoyé.")
+            
+        request.session['activation_email'] = email
+        return redirect('accounts:activation_pending')
+
+    return render(request, 'accounts/activation_invalid.html')
 
 
 def traveler_logout(request):
@@ -130,3 +209,4 @@ def my_bookings(request):
     return render(request, 'accounts/my_bookings.html', {
         'bookings': bookings
     })
+
