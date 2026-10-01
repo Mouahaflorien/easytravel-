@@ -1,0 +1,34 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div id="content-main">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <fieldset class="module aligned">
+            <div class="form-row">
+                <h2>Importation en masse pour : {{ agency.name }}</h2>
+                <p>Veuillez uploader un fichier CSV avec les colonnes suivantes :</p>
+                <ul>
+                    <li><strong>Matricule Bus</strong></li>
+                    <li><strong>Type Bus</strong></li>
+                    <li><strong>Capacite</strong></li>
+                    <li><strong>Nom de la Ligne</strong></li>
+                    <li><strong>Arrets</strong> (séparés par des tirets, ex: Nkongsamba-Melong-Bafang)</li>
+                    <li><strong>Heure Depart</strong> (ex: 08:30)</li>
+                    <li><strong>Date Depart</strong> (ex: 2026-10-15)</li>
+                </ul>
+                <p><i>Note : La première ligne du fichier doit contenir ces en-têtes (l'ordre des colonnes n'a pas d'importance, les noms doivent correspondre ou du moins être en premier). Le délimiteur recommandé est la virgule ou le point-virgule.</i></p>
+                <hr>
+                <div>
+                    <label for="csv_file" class="required">Fichier CSV :</label>
+                    <input type="file" name="csv_file" id="csv_file" accept=".csv" required>
+                </div>
+            </div>
+        </fieldset>
+        <div class="submit-row">
+            <input type="submit" value="Importer" class="default" name="_save">
+        </div>
+    </form>
+</div>
+{% endblock %}

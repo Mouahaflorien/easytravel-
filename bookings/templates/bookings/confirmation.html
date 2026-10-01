@@ -1,0 +1,403 @@
+{% extends 'travel/base.html' %}
+{% load agency_extras %}
+
+{% block title %}E-Billet de Voyage - {{ booking.reference }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styles du Billet / E-Ticket */
+    .ticket-wrapper {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .ticket-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        color: white;
+        padding: 24px 30px;
+    }
+    
+    .ticket-body {
+        padding: 28px 30px;
+    }
+    
+    .ticket-divider {
+        position: relative;
+        border-top: 2px dashed #cbd5e1;
+        margin: 22px 0;
+    }
+    
+    .ticket-divider::before, .ticket-divider::after {
+        content: '';
+        position: absolute;
+        top: -12px;
+        width: 24px;
+        height: 24px;
+        background-color: #f8fafc;
+        border-radius: 50%;
+        border: 1px solid #cbd5e1;
+    }
+    .ticket-divider::before { left: -42px; }
+    .ticket-divider::after { right: -42px; }
+
+    .qr-box {
+        background: white;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1.5px solid #cbd5e1;
+        display: inline-block;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .qr-box img {
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+
+    /* Optimisation stricte pour impression papier / PDF sur 1 SEULE PAGE */
+    @page {
+        size: A4 portrait;
+        margin: 8mm 12mm;
+    }
+
+    @media print {
+        html, body {
+            background-color: white !important;
+            color: #000000 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            font-size: 13px !important;
+        }
+        nav, footer, .no-print, .breadcrumb, .modal {
+            display: none !important;
+        }
+        main {
+            padding-top: 0 !important;
+            min-height: auto !important;
+        }
+        .container {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .ticket-wrapper {
+            box-shadow: none !important;
+            border: 2px solid #0f172a !important;
+            border-radius: 8px !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin: 0 !important;
+        }
+        .ticket-header {
+            background: #0f172a !important;
+            color: #ffffff !important;
+            padding: 14px 20px !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .ticket-body {
+            padding: 16px 20px !important;
+        }
+        .ticket-divider {
+            margin: 12px 0 !important;
+        }
+        .ticket-divider::before, .ticket-divider::after {
+            display: none !important;
+        }
+        .qr-box {
+            padding: 6px !important;
+            border: 1.5px solid #000 !important;
+        }
+        .qr-box img {
+            width: 130px !important;
+            height: 130px !important;
+        }
+        .card.bg-light {
+            padding: 10px !important;
+            background-color: #f8fafc !important;
+            border: 1px solid #cbd5e1 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .text-primary {
+            color: #1e3a8a !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Barre d'actions non imprimable -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 no-print">
+        <div>
+            {% if booking.payment_status == 'paid' %}
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-2 fw-semibold fs-6 d-inline-flex align-items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    <span>Réservation Confirmée & Billet Payé</span>
+                </span>
+                <h3 class="fw-bold text-dark mt-2 mb-0">Votre Titre de Transport Officiel</h3>
+            {% else %}
+                <span class="badge bg-warning bg-opacity-15 text-warning-emphasis rounded-pill px-3 py-2 fw-semibold fs-6 d-inline-flex align-items-center gap-2 border border-warning-subtle">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span>Réservation Enregistrée • En attente de paiement</span>
+                </span>
+                <h3 class="fw-bold text-dark mt-2 mb-0">Validation & Règlement de votre Billet</h3>
+            {% endif %}
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            {% if booking.payment_status != 'paid' %}
+                <a href="{% url 'payments:initiate' booking.id %}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold d-inline-flex align-items-center gap-2 shadow-sm text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
+                    </svg>
+                    <span>Payer maintenant (MTN / Orange / Carte)</span>
+                </a>
+            {% endif %}
+            <button onclick="window.print()" class="btn btn-dark rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span>Imprimer / PDF</span>
+            </button>
+            <a href="{% url 'accounts:my_bookings' %}" class="btn btn-outline-secondary rounded-pill px-3 py-2 d-inline-flex align-items-center gap-1.5">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                    <circle cx="12" cy="12" r="2"></circle>
+                </svg>
+                <span>Mes Réservations</span>
+            </a>
+        </div>
+    </div>
+
+    {% if booking.payment_status != 'paid' %}
+    <!-- Encart Incitatif Règlement Sécurisé CinetPay -->
+    <div class="alert alert-warning border border-warning-subtle shadow-sm rounded-4 p-3 mb-4 no-print" style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-start gap-3">
+                <div class="p-2.5 rounded-3 bg-warning text-dark flex-shrink-0 mt-1">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-1">Réglez votre place pour garantir votre départ</h5>
+                    <p class="text-secondary small mb-0">
+                        Votre réservation <strong>{{ booking.reference }}</strong> est enregistrée. Utilisez votre compte <strong>MTN Mobile Money</strong>, <strong>Orange Money Cameroun</strong> ou votre <strong>Carte Bancaire</strong> pour obtenir immédiatement votre titre de transport avec QR Code d'embarquement prioritaire.
+                    </p>
+                </div>
+            </div>
+            <div class="text-md-end flex-shrink-0">
+                <a href="{% url 'payments:initiate' booking.id %}" class="btn btn-warning text-dark fw-bold px-4 py-2.5 rounded-pill shadow-xs d-inline-flex align-items-center gap-2">
+                    <span>Régler {{ booking.total_amount|format_money }} FCFA</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Le Billet de Transport Professionnel (Boarding Pass) -->
+    <div class="row justify-content-center">
+        <div class="col-lg-9">
+            <div class="ticket-wrapper">
+                
+                <!-- En-tête Billet -->
+                <div class="ticket-header">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <div class="small text-uppercase text-secondary fw-bold" style="letter-spacing: 1px;">
+                                Compagnie de Transport Agréée
+                            </div>
+                            <h2 class="fw-bold text-white mb-0">{{ booking.departure.agency.name }}</h2>
+                            <small class="text-white-50">Ligne : {{ booking.departure.line.name }} • Service Interurbain Homologué</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-warning text-dark px-3 py-1.5 fw-bold text-uppercase rounded-pill" style="letter-spacing: 1px; font-size: 0.75rem;">
+                                E-BILLET OFFICIEL
+                            </span>
+                            <div class="mt-1 text-white-50 small">RÉFÉRENCE UNIQUE</div>
+                            <div class="fs-3 fw-bold text-white font-monospace" style="letter-spacing: 2px;">{{ booking.reference }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Corps du Billet -->
+                <div class="ticket-body">
+                    
+                    <!-- Grand Trajet -->
+                    <div class="row align-items-center text-center my-3 g-3">
+                        <div class="col-md-5">
+                            <div class="text-muted small text-uppercase fw-semibold">Point d'Embarquement</div>
+                            <h2 class="fw-bold text-primary mb-1">{{ start_city }}</h2>
+                            <span class="badge bg-light text-dark border px-3 py-1">
+                                Départ : {{ booking.departure.time|time:"H:i" }}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="text-primary d-flex align-items-center justify-content-center my-1">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </div>
+                            <small class="text-muted fw-semibold">Direct</small>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="text-muted small text-uppercase fw-semibold">Point de Débarquement</div>
+                            <h2 class="fw-bold text-primary mb-1">{{ end_city }}</h2>
+                            <span class="badge bg-light text-dark border px-3 py-1">
+                                Destination Finale
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Ligne perforée -->
+                    <div class="ticket-divider"></div>
+
+                    <!-- Informations Passager & Sécurité CNI -->
+                    <div class="row g-4">
+                        <div class="col-md-8">
+                            <h6 class="fw-bold text-dark text-uppercase small mb-3" style="letter-spacing: 0.5px;">
+                                Données du Voyageur (Contrôle Identité)
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Nom du Passager</span>
+                                    <strong class="text-dark fs-5 fw-bold">{{ booking.traveler_name }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Pièce d'Identité</span>
+                                    <strong class="text-dark fs-6">
+                                        <span class="badge bg-primary bg-opacity-10 text-primary">{{ booking.get_id_type_display|default:booking.id_type }}</span>
+                                        {{ booking.id_number }}
+                                    </strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Téléphone</span>
+                                    <strong class="text-dark">{{ booking.traveler_phone|format_phone }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Email de confirmation</span>
+                                    <strong class="text-dark">{{ booking.traveler_email }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Date du Voyage</span>
+                                    <strong class="text-dark fs-6">{{ booking.departure.date|date:"l d F Y" }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Type de Véhicule</span>
+                                    <strong class="text-dark">{{ booking.departure.vehicle.vehicle_type|default:"Bus Standard" }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    <span class="text-muted small d-block">Places Réservées</span>
+                                    <strong class="text-dark fs-5">{{ booking.seats_reserved }} place{{ booking.seats_reserved|pluralize }}</strong>
+                                </div>
+                                <div class="col-sm-6">
+                                    {% if booking.payment_status == 'paid' %}
+                                        <span class="text-muted small d-block">Montant Réglé</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="text-success fs-5 fw-bold">{{ booking.total_amount|format_money }} FCFA</strong>
+                                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1 small">
+                                                ✓ Payé ({{ booking.payment_operator|upper|default:"EN LIGNE" }})
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted small d-block">Montant à Régler</span>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <strong class="text-warning-emphasis fs-5 fw-bold">{{ booking.total_amount|format_money }} FCFA</strong>
+                                            <span class="badge bg-warning bg-opacity-15 text-warning-emphasis rounded-pill px-2.5 py-1 small border border-warning-subtle">
+                                                En attente de règlement
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bloc QR Code & Contrôle Agent -->
+                        <div class="col-md-4 text-center d-flex flex-column align-items-center justify-content-center border-start ps-md-4">
+                            <div class="qr-box mb-2 position-relative">
+                                <img src="{{ qr_code_url }}" alt="QR Code Contrôle Embarquement" class="img-fluid {% if booking.payment_status != 'paid' %}opacity-75{% endif %}" width="150" height="150">
+                            </div>
+                            {% if booking.payment_status == 'paid' %}
+                                <span class="badge bg-success text-white px-2.5 py-1 rounded-pill small fw-semibold">
+                                    ✓ Titre Valide pour Embarquement
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark px-2.5 py-1 rounded-pill small fw-semibold">
+                                    Pré-réservation Enregistrée
+                                </span>
+                                <small class="text-muted mt-1" style="font-size: 0.72rem;">
+                                    Actif après validation CinetPay
+                                </small>
+                            {% endif %}
+                            <span class="badge bg-light text-secondary border mt-1" style="font-size: 0.7rem;">
+                                Sécurisé EasyTravel
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Consignes & Réglementation Transport Cameroun -->
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="card bg-light border-0 rounded-3 p-3">
+                            <h6 class="fw-bold text-dark small mb-2 d-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                                </svg>
+                                <span>Consignes obligatoires d'embarquement :</span>
+                            </h6>
+                            <ul class="mb-0 text-muted small ps-3">
+                                <li><strong>Présentation à l'agence :</strong> Veuillez vous présenter au quai au moins <strong>30 minutes</strong> avant l'heure de départ.</li>
+                                <li><strong>Vérification d'identité :</strong> Le passager doit obligatoirement présenter l'original de sa pièce d'identité (<strong>{{ booking.get_id_type_display|default:booking.id_type }} N° {{ booking.id_number }}</strong>).</li>
+                                <li><strong>Bagages :</strong> 1 bagage standard en soute inclus par passager + 1 petit sac à main.</li>
+                                <li><strong>Validité :</strong> Ce titre de transport est nominatif et valable uniquement pour la date et l'heure indiquées.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Pied de Billet -->
+                <div class="bg-light px-4 py-3 border-top d-flex justify-content-between align-items-center text-muted small">
+                    <span>Émis le {{ booking.created_at|date:"d/m/Y à H:i" }}</span>
+                    <span>Plateforme de Billetterie EasyTravel Cameroun</span>
+                </div>
+
+            </div>
+
+            <!-- Boutons de retour en bas -->
+            <div class="text-center mt-4 no-print">
+                <a href="{% url 'travel:home' %}" class="btn btn-outline-secondary rounded-pill px-4 d-inline-flex align-items-center gap-2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span>Rechercher un autre trajet</span>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

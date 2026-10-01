@@ -1,0 +1,184 @@
+{% extends 'agencies/base_agency.html' %}
+{% block title %}Flotte - {{ current_agency.name|default:"Mon Agence" }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">Ma Flotte de Véhicules</h3>
+        <p class="text-muted small mb-0">Gestion du parc de bus, coasters et disponibilité opérationnelle en direct</p>
+    </div>
+    <a href="{% url 'agencies:vehicle_create' %}" class="btn btn-primary fw-semibold rounded-pill px-4 d-inline-flex align-items-center gap-2 shadow-xs">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-white" style="stroke: #ffffff !important;">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Ajouter un véhicule</span>
+    </a>
+</div>
+
+<!-- Synthèse Opérationnelle de la Flotte -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card p-3 d-flex align-items-center gap-3">
+            <div class="p-2.5 rounded-3 bg-primary bg-opacity-10 text-primary">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-title">Total Parc</div>
+                <div class="fs-4 fw-bold text-dark">{{ total_vehicles|default:vehicles.count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card p-3 d-flex align-items-center gap-3">
+            <div class="p-2.5 rounded-3 bg-success bg-opacity-10 text-success">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-title">Disponibles</div>
+                <div class="fs-4 fw-bold text-success">{{ available_count|default:"0" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card p-3 d-flex align-items-center gap-3">
+            <div class="p-2.5 rounded-3 bg-info bg-opacity-10 text-info">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 14 14"></polyline>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-title">En Voyage</div>
+                <div class="fs-4 fw-bold text-dark">{{ in_trip_count|default:"0" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="stat-card p-3 d-flex align-items-center gap-3">
+            <div class="p-2.5 rounded-3 bg-warning bg-opacity-15 text-warning-emphasis">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="stat-title">Maintenance / Indisponible</div>
+                <div class="fs-4 fw-bold text-dark">{{ maintenance_count|default:"0" }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card table-card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Type de Véhicule</th>
+                    <th>Capacité</th>
+                    <th>Immatriculation</th>
+                    <th>Disponibilité Opérationnelle</th>
+                    <th>Équipements</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vehicle in vehicles %}
+                <tr>
+                    <td class="ps-4 fw-semibold text-dark">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="p-2 rounded-2 bg-light text-secondary d-inline-flex">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="1" y="3" width="15" height="13"></rect>
+                                    <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                                </svg>
+                            </span>
+                            <span>{{ vehicle.vehicle_type }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-light border text-dark fw-bold px-2.5 py-1">
+                            {{ vehicle.capacity }} places
+                        </span>
+                    </td>
+                    <td>
+                        <span class="font-monospace fw-semibold text-secondary">
+                            {{ vehicle.registration|default:"-" }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if vehicle.status == 'available' %}
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                <span class="rounded-circle bg-success" style="width: 6px; height: 6px;"></span>
+                                <span>Disponible</span>
+                            </span>
+                        {% elif vehicle.status == 'in_trip' %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                <span class="rounded-circle bg-primary" style="width: 6px; height: 6px;"></span>
+                                <span>En voyage</span>
+                            </span>
+                        {% elif vehicle.status == 'maintenance' %}
+                            <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                <span class="rounded-circle bg-warning" style="width: 6px; height: 6px;"></span>
+                                <span>En maintenance</span>
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                <span class="rounded-circle bg-danger" style="width: 6px; height: 6px;"></span>
+                                <span>Hors service</span>
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">
+                        {{ vehicle.amenities|default:"Standard"|truncatechars:40 }}
+                    </td>
+                    <td class="text-end pe-4">
+                        <div class="d-inline-flex align-items-center gap-1.5 justify-content-end">
+                            <!-- Action Modifier (Crayon) -->
+                            <a href="{% url 'agencies:vehicle_update' vehicle.pk %}" class="btn-action-icon" title="Modifier ce véhicule">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                            <!-- Action Supprimer (Corbeille adoucie) -->
+                            <a href="{% url 'agencies:vehicle_delete' vehicle.pk %}" class="btn-action-icon btn-action-delete" title="Supprimer ce véhicule">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <div class="mb-2 text-secondary">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="1" y="3" width="15" height="13"></rect>
+                                <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                            </svg>
+                        </div>
+                        <h6 class="fw-bold text-dark">Aucun véhicule enregistré</h6>
+                        <small>Ajoutez vos premiers bus ou coasters pour commencer à programmer des départs.</small>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

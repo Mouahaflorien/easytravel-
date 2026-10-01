@@ -1,0 +1,139 @@
+{% extends 'agencies/base_agency.html' %}
+{% block title %}{% if object %}Modifier le départ{% else %}Programmer un départ{% endif %} - Mon Agence{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'agencies:departure_list' %}" class="btn btn-sm btn-light border text-secondary rounded-pill px-3 py-1 mb-2 d-inline-flex align-items-center gap-1.5 shadow-xs">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Retour aux départs</span>
+    </a>
+    <h3 class="fw-bold mb-1 text-dark">{% if object %}Modifier le départ{% else %}Programmer un nouveau départ{% endif %}</h3>
+    <p class="text-muted small mb-0">Planification des voyages, assignation de la flotte et des conducteurs</p>
+</div>
+
+<div class="row">
+    <div class="col-lg-7 col-xl-6">
+        <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+            
+            <!-- Bandeau de protection anti-conflit -->
+            <div class="p-3 bg-primary bg-opacity-10 border-bottom border-primary border-opacity-10 d-flex align-items-center gap-2.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                <div class="small text-dark">
+                    <strong>Contrôle anti-conflits actif :</strong> Le système vérifie en temps réel la disponibilité du bus et du chauffeur selon la durée du voyage.
+                </div>
+            </div>
+
+            <div class="card-body p-4 p-md-4.5">
+                <form method="post" id="departure-form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger border-0 rounded-3 p-3 mb-3 small">
+                        {{ form.non_field_errors }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Ligne / Trajet -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted d-flex align-items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            <span>{{ form.line.label }}</span>
+                        </label>
+                        {{ form.line }}
+                        {% if form.line.errors %}
+                        <div class="text-danger small mt-1">{{ form.line.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <!-- Date -->
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted d-flex align-items-center gap-1.5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                <span>{{ form.date.label }}</span>
+                            </label>
+                            {{ form.date }}
+                            {% if form.date.errors %}
+                            <div class="text-danger small mt-1">{{ form.date.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Heure -->
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted d-flex align-items-center gap-1.5">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                <span>{{ form.time.label }}</span>
+                            </label>
+                            {{ form.time }}
+                            {% if form.time.errors %}
+                            <div class="text-danger small mt-1">{{ form.time.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Véhicule assigné -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted d-flex align-items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                            <span>{{ form.vehicle.label }}</span>
+                        </label>
+                        {{ form.vehicle }}
+                        {% if form.vehicle.errors %}
+                        <div class="alert alert-danger bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 p-2.5 small mt-2 mb-0">
+                            <strong>Attention :</strong> {{ form.vehicle.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Chauffeur assigné -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted d-flex align-items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span>{{ form.driver.label }}</span>
+                        </label>
+                        {{ form.driver }}
+                        {% if form.driver.errors %}
+                        <div class="alert alert-danger bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 p-2.5 small mt-2 mb-0">
+                            <strong>Attention :</strong> {{ form.driver.errors.0 }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text small">Sélectionnez le chauffeur titulaire pour ce voyage.</div>
+                    </div>
+
+                    <div class="mt-4 pt-2 border-top d-flex justify-content-end gap-2">
+                        <a href="{% url 'agencies:departure_list' %}" class="btn btn-light rounded-pill px-4 border">Annuler</a>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-xs">
+                            {% if object %}Mettre à jour le départ{% else %}Valider la programmation{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const dateInput = document.getElementById("departure-form-date") || document.querySelector('input[name="date"]');
+        if (dateInput && typeof flatpickr !== "undefined") {
+            flatpickr(dateInput, {
+                locale: "fr",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                altInputClass: "form-control",
+                allowInput: true,
+                placeholder: "JJ/MM/AAAA",
+                minDate: "today"
+            });
+        }
+    });
+</script>
+{% endblock %}

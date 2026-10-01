@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls %}
+
+{% block object-tools-items %}
+    {{ block.super }}
+    {% if original %}
+        <li>
+            <a href="{% url 'admin:agency-import-csv' original.pk %}" class="historylink" style="background-color: #4CAF50; color: white;">
+                Importer des données (CSV)
+            </a>
+        </li>
+    {% endif %}
+{% endblock %}

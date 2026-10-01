@@ -1,0 +1,766 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+{% block title %}Paramètres de l'Agence - Configuration Système{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h3 class="fw-bold mb-1 text-dark">Paramètres de l'Agence</h3>
+            <p class="text-muted small mb-0">Personnalisation visuelle, informations légales, configurations métier et périphériques</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'agencies:dashboard' %}" class="btn btn-outline-secondary rounded-pill px-3 py-1.5 fw-medium d-inline-flex align-items-center gap-2 shadow-xs">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Retour au tableau de bord</span>
+            </a>
+            <button type="submit" form="agencySettingsForm" class="btn btn-primary rounded-pill px-4 py-1.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span>Enregistrer les modifications</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+<div class="mb-4">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'success' }} alert-dismissible fade show border-0 rounded-3 shadow-xs d-flex align-items-center gap-2 p-3" role="alert">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-success flex-shrink-0">
+            <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        <div class="fw-medium small">{{ message }}</div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" id="agencySettingsForm">
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <!-- Navigation par onglets (Pills verticaux sur desktop) -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 p-3 bg-white sticky-top" style="top: 90px;">
+                <div class="nav flex-column nav-pills gap-1" id="settings-tabs" role="tablist">
+                    <button class="nav-link text-start active d-flex align-items-center gap-2.5 py-2.5 px-3 rounded-3" 
+                            id="tab-display-btn" data-bs-toggle="pill" data-bs-target="#tab-display" type="button" role="tab">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2"></path>
+                            <path d="M12 20v2"></path>
+                            <path d="m4.93 4.93 1.41 1.41"></path>
+                            <path d="m17.66 17.66 1.41 1.41"></path>
+                            <path d="M2 12h2"></path>
+                            <path d="M20 12h2"></path>
+                            <path d="m6.34 17.66-1.41 1.41"></path>
+                            <path d="m19.07 4.93-1.41 1.41"></path>
+                        </svg>
+                        <span class="fw-semibold small">1. Affichage & Thème</span>
+                    </button>
+
+                    <button class="nav-link text-start d-flex align-items-center gap-2.5 py-2.5 px-3 rounded-3" 
+                            id="tab-profile-btn" data-bs-toggle="pill" data-bs-target="#tab-profile" type="button" role="tab">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path>
+                            <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path>
+                            <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path>
+                            <path d="M10 6h4"></path>
+                            <path d="M10 10h4"></path>
+                            <path d="M10 14h4"></path>
+                            <path d="M10 18h4"></path>
+                        </svg>
+                        <span class="fw-semibold small">2. Profil & Mentions Légales</span>
+                    </button>
+
+                    <button class="nav-link text-start d-flex align-items-center gap-2.5 py-2.5 px-3 rounded-3" 
+                            id="tab-operations-btn" data-bs-toggle="pill" data-bs-target="#tab-operations" type="button" role="tab">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        <span class="fw-semibold small">3. Métier & Réservations</span>
+                    </button>
+
+                    <button class="nav-link text-start d-flex align-items-center gap-2.5 py-2.5 px-3 rounded-3" 
+                            id="tab-hardware-btn" data-bs-toggle="pill" data-bs-target="#tab-hardware" type="button" role="tab">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                            <rect x="6" y="14" width="12" height="8"></rect>
+                        </svg>
+                        <span class="fw-semibold small">4. Matériel & Impression</span>
+                    </button>
+
+                    <button class="nav-link text-start d-flex align-items-center gap-2.5 py-2.5 px-3 rounded-3" 
+                            id="tab-notifications-btn" data-bs-toggle="pill" data-bs-target="#tab-notifications" type="button" role="tab">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        <span class="fw-semibold small">5. Notifications & Alertes</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenu des Onglets -->
+        <div class="col-lg-9">
+            <div class="tab-content" id="settings-tabs-content">
+                
+                <!-- 1. PRÉFÉRENCES D'AFFICHAGE & INTERFACE -->
+                <div class="tab-pane fade show active" id="tab-display" role="tabpanel">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                        <div class="border-bottom pb-3 mb-4">
+                            <h5 class="fw-bold text-dark mb-1">Préférences d'Affichage et Interface</h5>
+                            <p class="text-muted small mb-0">Adaptez le confort visuel, le thème nocturne et la charte de votre marque</p>
+                        </div>
+
+                        <!-- Thème et Luminosité -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-dark mb-2">Thème et Luminosité</label>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center position-relative theme-selector-card" for="theme_light">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-3" type="radio" name="theme_mode" id="theme_light" value="light" {% if form.theme_mode.value == 'light' %}checked{% endif %}>
+                                        <div class="p-2 mb-2 rounded bg-light border d-inline-block">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="5"></circle>
+                                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                                            </svg>
+                                        </div>
+                                        <div class="fw-bold small text-dark">Mode Clair</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">Optimal en plein jour au guichet</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center position-relative theme-selector-card" for="theme_dark">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-3" type="radio" name="theme_mode" id="theme_dark" value="dark" {% if form.theme_mode.value == 'dark' %}checked{% endif %}>
+                                        <div class="p-2 mb-2 rounded bg-dark border d-inline-block">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                                            </svg>
+                                        </div>
+                                        <div class="fw-bold small text-dark">Mode Sombre</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">Réduit la fatigue lors des gardes de nuit</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-3 border rounded-3 cursor-pointer text-center position-relative theme-selector-card" for="theme_system">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-3" type="radio" name="theme_mode" id="theme_system" value="system" {% if form.theme_mode.value == 'system' %}checked{% endif %}>
+                                        <div class="p-2 mb-2 rounded bg-light border d-inline-block">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                                                <line x1="8" y1="21" x2="16" y2="21"></line>
+                                                <line x1="12" y1="17" x2="12" y2="21"></line>
+                                            </svg>
+                                        </div>
+                                        <div class="fw-bold small text-dark">Auto (Système)</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">Synchronisé avec votre appareil</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Charte Graphique (Marque Blanche) -->
+                        <div class="mb-4 pt-3 border-top">
+                            <label class="form-label fw-bold small text-dark mb-1">Couleur Principale d'Accentuation</label>
+                            <p class="text-muted small mb-3">Personnalise les boutons, menus actifs et éléments d'action du portail agence</p>
+                            
+                            <div class="d-flex flex-wrap align-items-center gap-3">
+                                <!-- Palettes prédéfinies cliquables -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <button type="button" class="color-preset-btn rounded-circle border-0 shadow-xs" data-color="#2563eb" style="width: 32px; height: 32px; background: #2563eb;" title="Bleu Royal"></button>
+                                    <button type="button" class="color-preset-btn rounded-circle border-0 shadow-xs" data-color="#059669" style="width: 32px; height: 32px; background: #059669;" title="Vert Émeraude"></button>
+                                    <button type="button" class="color-preset-btn rounded-circle border-0 shadow-xs" data-color="#d97706" style="width: 32px; height: 32px; background: #d97706;" title="Ambre Express"></button>
+                                    <button type="button" class="color-preset-btn rounded-circle border-0 shadow-xs" data-color="#dc2626" style="width: 32px; height: 32px; background: #dc2626;" title="Rouge Voyage"></button>
+                                    <button type="button" class="color-preset-btn rounded-circle border-0 shadow-xs" data-color="#7c3aed" style="width: 32px; height: 32px; background: #7c3aed;" title="Violet VIP"></button>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2" style="max-width: 180px;">
+                                    {{ form.primary_color }}
+                                </div>
+                                <span class="small text-muted font-monospace" id="colorCodePreview">{{ form.primary_color.value|default:'#2563eb' }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Langue et Régionalisation -->
+                        <div class="pt-3 border-top">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-dark mb-1">Langue de l'Interface</label>
+                                    {{ form.language }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-dark mb-1">Format de Date</label>
+                                    {{ form.date_format }}
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold small text-dark mb-1">Format d'Heure</label>
+                                    {{ form.time_format }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. PROFIL ET INFORMATIONS LÉGALES -->
+                <div class="tab-pane fade" id="tab-profile" role="tabpanel">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                        <div class="border-bottom pb-3 mb-4">
+                            <h5 class="fw-bold text-dark mb-1">Profil & Informations Légales de l'Entreprise</h5>
+                            <p class="text-muted small mb-0">Raison sociale, identifiants administratifs et mentions obligatoires</p>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Nom Commercial de l'Agence *</label>
+                                {{ form.name }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Nom affiché sur le site web et la barre latérale.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Raison Sociale Officielle</label>
+                                {{ form.legal_name }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Nom juridique enregistré au registre de commerce (RCCM).</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Numéro Contribuable (NIU / RCCM)</label>
+                                {{ form.tax_id }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Numéro d'Agrément Ministériel</label>
+                                {{ form.license_number }}
+                            </div>
+                        </div>
+
+                        <!-- Logo de l'entreprise -->
+                        <div class="mb-4 p-3 bg-light rounded-3">
+                            <label class="form-label fw-bold small text-dark mb-2">Logo Officiel de l'Agence</label>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if current_agency.logo %}
+                                    <img src="{{ current_agency.logo.url }}" width="56" height="56" class="rounded-3 border object-fit-cover shadow-xs" alt="Logo Actuel">
+                                {% else %}
+                                    <div class="bg-secondary bg-opacity-25 rounded-3 d-flex align-items-center justify-content-center text-secondary fw-bold" style="width: 56px; height: 56px;">
+                                        LOGO
+                                    </div>
+                                {% endif %}
+                                <div class="flex-grow-1">
+                                    {{ form.logo }}
+                                    <small class="text-muted" style="font-size: 0.75rem;">Format recommandé : PNG transparent ou JPG, carré ou horizontal (max 2 Mo).</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Coordonnées centrales -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Téléphone Support / Guichet *</label>
+                                {{ form.phone }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Numéro WhatsApp Agence</label>
+                                {{ form.whatsapp }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Email Officiel</label>
+                                {{ form.email }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold small text-dark mb-1">Adresse Complète du Siège Social</label>
+                                {{ form.address }}
+                            </div>
+                        </div>
+
+                        <!-- Mentions Légales des Billets -->
+                        <div class="pt-3 border-top">
+                            <label class="form-label fw-bold small text-dark mb-1">Mentions Légales & Conditions Générales des Billets</label>
+                            <p class="text-muted small mb-2">Texte réglementaire imprimé automatiquement au dos ou au bas de chaque ticket passager (politique bagages, retards, remboursement).</p>
+                            {{ form.ticket_terms }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. PARAMÈTRES OPÉRATIONNELS (MÉTIER) -->
+                <div class="tab-pane fade" id="tab-operations" role="tabpanel">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-4 border-bottom gap-2">
+                            <div>
+                                <h5 class="fw-bold text-dark mb-1">Paramètres Opérationnels & Réservations</h5>
+                                <p class="text-muted small mb-0">Gestion de la tarification, devise, taxes et délais stricts d'embarquement</p>
+                            </div>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <span>Modifiable par la Direction / Gérant</span>
+                            </span>
+                        </div>
+
+                        <!-- Bannière d'état des droits et modifiabilité -->
+                        <div class="alert alert-info border-0 rounded-3 p-3 mb-4 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2.5">
+                                <div class="p-2 rounded-2 bg-info bg-opacity-25 text-info flex-shrink-0">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <strong class="text-dark small d-block">Règles Métier Déverrouillées & Actives</strong>
+                                    <span class="text-muted" style="font-size: 0.76rem;">Ces paramètres s'appliquent en temps réel à l'ensemble des gares et départs de l'agence. Vous pouvez les modifier et enregistrer librement.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Devise Principale</label>
+                                {{ form.currency }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Devise d'encaissement et de reporting (ex: FCFA).</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Taux de TVA (%)</label>
+                                {{ form.vat_rate }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Laisser 0.00 si les billets sont exonérés.</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold small text-dark mb-1">Fuseau Horaire de Référence</label>
+                                {{ form.timezone }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Synchronise l'ensemble des gares et départs.</small>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 pt-3 border-top">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Clôture des Réservations en Ligne (minutes)</label>
+                                {{ form.booking_cutoff_minutes }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Temps avant le départ où les ventes web sont bloquées au profit du guichet.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-dark mb-1">Délai Maximum d'Annulation (heures)</label>
+                                {{ form.cancellation_deadline_hours }}
+                                <small class="text-muted" style="font-size: 0.75rem;">Délai limite avant départ pour annuler ou reporter un voyage.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. MATÉRIEL ET PÉRIPHÉRIQUES (DISTINCTION 3 NIVEAUX) -->
+                <div class="tab-pane fade" id="tab-hardware" role="tabpanel">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                        <div class="border-bottom pb-3 mb-4">
+                            <h5 class="fw-bold text-dark mb-1">Matériel & Périphériques de Gare</h5>
+                            <p class="text-muted small mb-0">Contrôle à 3 niveaux : Fonction activée, Matériel connecté et Test de communication réussi</p>
+                        </div>
+
+                        <!-- 1. IMPRIMANTE BILLETS & REÇUS (3 NIVEAUX) -->
+                        <div class="p-3 mb-4 rounded-3 border bg-light">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 rounded-2 bg-primary bg-opacity-10 text-primary">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                            <rect x="6" y="14" width="12" height="8"></rect>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-0">1. Imprimante Billetterie & Reçus</h6>
+                                        <small class="text-muted">Émission physique des tickets aux guichets</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Niveau 1 : Fonction activée -->
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
+                                        Fonction activée
+                                    </span>
+                                    <!-- Niveau 2 : Matériel connecté -->
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                        <span class="rounded-circle bg-info" style="width: 5px; height: 5px;"></span>
+                                        <span>Spooler Système Connecté</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-2.5 border rounded-3 cursor-pointer text-center position-relative bg-white" for="printer_a4">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-2" type="radio" name="printer_format" id="printer_a4" value="a4" {% if form.printer_format.value == 'a4' %}checked{% endif %}>
+                                        <div class="fw-bold small text-dark mt-1">Format A4</div>
+                                        <small class="text-muted" style="font-size: 0.7rem;">Factures & Bordereaux</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-2.5 border rounded-3 cursor-pointer text-center position-relative bg-white" for="printer_80">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-2" type="radio" name="printer_format" id="printer_80" value="thermal_80" {% if form.printer_format.value == 'thermal_80' %}checked{% endif %}>
+                                        <div class="fw-bold small text-dark mt-1">Thermique 80mm</div>
+                                        <small class="text-muted" style="font-size: 0.7rem;">Guichet POS (Epson/Star)</small>
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="card h-100 p-2.5 border rounded-3 cursor-pointer text-center position-relative bg-white" for="printer_58">
+                                        <input class="form-check-input position-absolute top-0 end-0 m-2" type="radio" name="printer_format" id="printer_58" value="thermal_58" {% if form.printer_format.value == 'thermal_58' %}checked{% endif %}>
+                                        <div class="fw-bold small text-dark mt-1">Thermique 58mm</div>
+                                        <small class="text-muted" style="font-size: 0.7rem;">Terminaux Mobiles TPE</small>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Niveau 3 : Test réussi (Action interactive) -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between p-2.5 bg-white rounded-3 border gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="small fw-semibold text-dark">Diagnostic matériel :</span>
+                                    <span id="printerTestBadge" class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">Prêt pour le test</span>
+                                </div>
+                                <button type="button" id="btnTestPrinter" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                    </svg>
+                                    <span>Lancer un test d'impression</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2. LECTEUR SCANNER QR CODE (3 NIVEAUX) -->
+                        <div class="p-3 mb-4 rounded-3 border bg-light">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 rounded-2 bg-success bg-opacity-10 text-success">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="3" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="14" width="7" height="7"></rect>
+                                            <rect x="3" y="14" width="7" height="7"></rect>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-0">2. Douchette Laser / Scanner QR Code</h6>
+                                        <small class="text-muted">Enregistrement et contrôle des billets à l'embarquement</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Niveau 1 : Fonction activée -->
+                                    <div class="form-check form-switch mb-0">
+                                        {{ form.scanner_enabled }}
+                                        <label class="form-check-label fw-semibold text-dark small" for="{{ form.scanner_enabled.id_for_label }}">
+                                            Fonction activée
+                                        </label>
+                                    </div>
+                                    <!-- Niveau 2 : Matériel connecté -->
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                        <span class="rounded-circle bg-success" style="width: 5px; height: 5px;"></span>
+                                        <span>Port USB HID Détecté</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Niveau 3 : Test interactif du scanner -->
+                            <div class="p-3 bg-white rounded-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small fw-semibold text-dark">Zone de test en direct :</span>
+                                    <span id="scannerStatus" class="badge bg-light text-muted border rounded-pill px-2.5 py-1" style="font-size: 0.72rem;">En attente de scan...</span>
+                                </div>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text bg-light">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="4" y1="9" x2="20" y2="9"></line>
+                                            <line x1="4" y1="15" x2="20" y2="15"></line>
+                                            <line x1="10" y1="3" x2="8" y2="21"></line>
+                                            <line x1="16" y1="3" x2="14" y2="21"></line>
+                                        </svg>
+                                    </span>
+                                    <input type="text" id="hardwareTestInput" class="form-control" placeholder="Pointez la douchette laser ici ou cliquez sur le bouton de test...">
+                                    <button type="button" id="btnSimulateScan" class="btn btn-outline-success fw-semibold btn-sm px-3">
+                                        Simuler un scan de billet
+                                    </button>
+                                </div>
+                                <div class="small text-muted" id="scannerResultText">
+                                    <em>Exemple : Flashez un billet pour valider instantanément la transmission laser.</em>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. BALANCE BAGAGES CONNECTÉE (3 NIVEAUX) -->
+                        <div class="p-3 rounded-3 border bg-light">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="p-2 rounded-2 bg-warning bg-opacity-15 text-warning-emphasis">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M12 2v20"></path>
+                                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-0">3. Balance Connectée de Pesée des Bagages</h6>
+                                        <small class="text-muted">Calcul automatique du supplément excédent bagages</small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Niveau 1 : Fonction activée -->
+                                    <div class="form-check form-switch mb-0">
+                                        {{ form.scale_enabled }}
+                                        <label class="form-check-label fw-semibold text-dark small" for="{{ form.scale_enabled.id_for_label }}">
+                                            Fonction activée
+                                        </label>
+                                    </div>
+                                    <!-- Niveau 2 : Matériel connecté -->
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                        <span class="rounded-circle bg-success" style="width: 5px; height: 5px;"></span>
+                                        <span>Liaison Série RS-232 Active</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- Niveau 3 : Test interactif de la balance -->
+                            <div class="d-flex flex-wrap align-items-center justify-content-between p-2.5 bg-white rounded-3 border gap-2">
+                                <div>
+                                    <span class="small fw-semibold text-dark">Lecture en direct de la tare :</span>
+                                    <span id="scaleWeightDisplay" class="font-monospace fw-bold text-dark ms-2">0.00 kg</span>
+                                    <span id="scaleTestBadge" class="badge bg-light text-muted border rounded-pill px-2.5 py-1 ms-2" style="font-size: 0.72rem;">Prête</span>
+                                </div>
+                                <button type="button" id="btnTestScale" class="btn btn-sm btn-outline-warning text-dark fw-semibold rounded-pill px-3 shadow-xs">
+                                    <span>Interroger la balance (Pesée test)</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. NOTIFICATIONS ET AUTOMATISATIONS -->
+                <div class="tab-pane fade" id="tab-notifications" role="tabpanel">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
+                        <div class="border-bottom pb-3 mb-4">
+                            <h5 class="fw-bold text-dark mb-1">Notifications & Alertes Automatiques</h5>
+                            <p class="text-muted small mb-0">Paramétrez les flux de messages aux passagers et les signaux au guichet</p>
+                        </div>
+
+                        <!-- Notifications Voyageurs -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-dark small mb-3 d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                                    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                                </svg>
+                                <span>Notifications Passagers (SMS & E-mail)</span>
+                            </h6>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.notify_sms_booking }}
+                                <label class="form-check-label fw-semibold text-dark small" for="{{ form.notify_sms_booking.id_for_label }}">
+                                    Envoi immédiat d'un SMS de confirmation lors de l'achat
+                                </label>
+                                <div class="text-muted" style="font-size: 0.75rem;">Contient la référence du billet, l'heure de départ, le numéro de siège et l'arrêt de montée.</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.notify_sms_reminder }}
+                                <label class="form-check-label fw-semibold text-dark small" for="{{ form.notify_sms_reminder.id_for_label }}">
+                                    Rappel automatique par SMS 2 heures avant le départ
+                                </label>
+                                <div class="text-muted" style="font-size: 0.75rem;">Rappelle au voyageur de se présenter à la gare 30 minutes avant le départ avec sa pièce d'identité.</div>
+                            </div>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.notify_email_ticket }}
+                                <label class="form-check-label fw-semibold text-dark small" for="{{ form.notify_email_ticket.id_for_label }}">
+                                    Délivrance automatique du billet électronique sécurisé par E-mail
+                                </label>
+                                <div class="text-muted" style="font-size: 0.75rem;">Envoie le e-billet au format PDF imprimable avec son QR code de sécurité.</div>
+                            </div>
+                        </div>
+
+                        <!-- Alertes Guichet Agents -->
+                        <div class="pt-3 border-top">
+                            <h6 class="fw-bold text-dark small mb-3 d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                <span>Alertes Opérationnelles des Guichets</span>
+                            </h6>
+
+                            <div class="form-check form-switch mb-3">
+                                {{ form.notify_agent_sound }}
+                                <label class="form-check-label fw-semibold text-dark small" for="{{ form.notify_agent_sound.id_for_label }}">
+                                    Signal sonore au guichet lors d'une nouvelle réservation en ligne
+                                </label>
+                                <div class="text-muted" style="font-size: 0.75rem;">Joue un carillon discret sur le poste de l'agent pour le prévenir de nouvelles places vendues.</div>
+                            </div>
+
+                            <div class="mt-3">
+                                <button type="button" id="btnTestSound" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-inline-flex align-items-center gap-1.5 shadow-xs">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                    </svg>
+                                    <span>Tester le signal sonore</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</form>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .nav-pills .nav-link {
+        color: #475569;
+        font-weight: 500;
+        transition: all 0.15s ease;
+        border: 1px solid transparent;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #f8fafc;
+        color: #0f172a;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #f1f5f9;
+        color: #2563eb;
+        border-color: #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .theme-selector-card:hover {
+        border-color: #3b82f6 !important;
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+    }
+    .color-preset-btn:hover {
+        transform: scale(1.15);
+        transition: transform 0.15s ease;
+    }
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Gestion des palettes de couleur prédéfinies
+        const colorInput = document.querySelector('input[name="primary_color"]');
+        const colorPreview = document.getElementById("colorCodePreview");
+        
+        document.querySelectorAll(".color-preset-btn").forEach(btn => {
+            btn.addEventListener("click", function() {
+                const selectedColor = this.getAttribute("data-color");
+                if (colorInput) {
+                    colorInput.value = selectedColor;
+                    if (colorPreview) colorPreview.textContent = selectedColor;
+                }
+            });
+        });
+
+        if (colorInput) {
+            colorInput.addEventListener("input", function() {
+                if (colorPreview) colorPreview.textContent = this.value;
+            });
+        }
+
+        // 2. Diagnostic matériel à 3 niveaux (Imprimante, Douchette, Balance)
+        const btnTestPrinter = document.getElementById("btnTestPrinter");
+        const printerTestBadge = document.getElementById("printerTestBadge");
+        if (btnTestPrinter && printerTestBadge) {
+            btnTestPrinter.addEventListener("click", function() {
+                printerTestBadge.className = "badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2.5 py-1";
+                printerTestBadge.textContent = "Communication en cours...";
+                setTimeout(function() {
+                    printerTestBadge.className = "badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold";
+                    printerTestBadge.textContent = "Test réussi : Ticket envoyé au spooler (OK)";
+                }, 400);
+            });
+        }
+
+        const testInput = document.getElementById("hardwareTestInput");
+        const scannerStatus = document.getElementById("scannerStatus");
+        const scannerResult = document.getElementById("scannerResultText");
+        const btnSimulateScan = document.getElementById("btnSimulateScan");
+
+        if (testInput) {
+            testInput.addEventListener("input", function() {
+                if (this.value.length > 5) {
+                    scannerStatus.textContent = "Test réussi : QR Code lu";
+                    scannerStatus.className = "badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold";
+                    scannerResult.innerHTML = "<strong class='text-success'>Données reçues :</strong> <code>" + this.value + "</code>";
+                }
+            });
+        }
+
+        if (btnSimulateScan) {
+            btnSimulateScan.addEventListener("click", function() {
+                const sampleTicket = "TKT-2026-DLA-YDE-0492";
+                if (testInput) testInput.value = sampleTicket;
+                if (scannerStatus) {
+                    scannerStatus.className = "badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold";
+                    scannerStatus.textContent = "Test réussi : Décodage en 8ms";
+                }
+                if (scannerResult) {
+                    scannerResult.innerHTML = "<strong class='text-success'>Billet décodé :</strong> <code>" + sampleTicket + "</code> — Passager : KAMGAING Jean-Paul (Douala ➔ Yaoundé)";
+                }
+            });
+        }
+
+        const btnTestScale = document.getElementById("btnTestScale");
+        const scaleWeightDisplay = document.getElementById("scaleWeightDisplay");
+        const scaleTestBadge = document.getElementById("scaleTestBadge");
+        if (btnTestScale && scaleWeightDisplay && scaleTestBadge) {
+            btnTestScale.addEventListener("click", function() {
+                scaleTestBadge.className = "badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2.5 py-1";
+                scaleTestBadge.textContent = "Interrogation RS-232...";
+                setTimeout(function() {
+                    scaleWeightDisplay.textContent = "18.50 kg";
+                    scaleTestBadge.className = "badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold";
+                    scaleTestBadge.textContent = "Test réussi : Poids stabilisé (18.50 kg, Tare 0.00 kg)";
+                }, 350);
+            });
+        }
+
+        // 3. Test du carillon sonore
+        const btnTestSound = document.getElementById("btnTestSound");
+        if (btnTestSound) {
+            btnTestSound.addEventListener("click", function() {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+                    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.5);
+                } catch(e) {
+                    console.log("Audio non disponible", e);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,329 @@
+{% load agency_extras %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liste des Passagers - {{ departure.agency.name }} ({{ departure.date|date:"d/m/Y" }})</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background-color: #f1f5f9; 
+            color: #0f172a; 
+            font-size: 13px; 
+        }
+        .manifest-container { 
+            max-width: 1020px; 
+            margin: 30px auto; 
+            background: white; 
+            padding: 35px 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); 
+        }
+        .header-title { 
+            border-bottom: 2px solid #0f172a; 
+            padding-bottom: 15px; 
+            margin-bottom: 20px; 
+        }
+        .meta-box { 
+            background: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            padding: 18px 20px; 
+            margin-bottom: 25px; 
+        }
+        .table th { 
+            background-color: #0f172a !important; 
+            color: white !important; 
+            font-size: 11px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
+        }
+        .table td { 
+            vertical-align: middle; 
+            padding: 10px 8px;
+        }
+        .signature-box { 
+            border: 1px dashed #94a3b8; 
+            height: 90px; 
+            border-radius: 6px; 
+            padding: 10px; 
+            margin-top: 8px; 
+            background-color: #fcfcfd;
+        }
+
+        /* Mode impression officielle */
+        @media print {
+            body { background: white !important; font-size: 11px; }
+            .manifest-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .table th { background-color: #000 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .badge { border: 1px solid #000 !important; color: #000 !important; background: transparent !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="manifest-container">
+    
+    <!-- 1. Barre d'outils interactifs supérieure (Masquée à l'impression) -->
+    <div class="no-print mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pb-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <a href="{% url 'agencies:departure_list' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 d-inline-flex align-items-center gap-1.5 shadow-xs">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    <span>Planning des départs</span>
+                </a>
+                <a href="{% url 'agencies:booking_list' %}?departure={{ departure.id }}" class="btn btn-light border btn-sm rounded-pill px-3 text-secondary">
+                    Toutes les réservations
+                </a>
+            </div>
+
+            <!-- Bouton d'impression officielle -->
+            <button onclick="window.print()" class="btn btn-dark fw-semibold btn-sm rounded-pill px-4 d-inline-flex align-items-center gap-2 shadow-sm">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                <span>Imprimer la Feuille de Route (Bordereau)</span>
+            </button>
+        </div>
+
+        <!-- 2. Volet Suivi de l'Embarquement en Temps Réel -->
+        <div class="card border-0 bg-light rounded-4 p-3 mt-3 shadow-xs">
+            <div class="row align-items-center g-3">
+                <div class="col-md-5">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="p-2 rounded-circle bg-success bg-opacity-15 text-success">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <polyline points="17 11 19 13 23 9"></polyline>
+                            </svg>
+                        </span>
+                        <div>
+                            <strong class="text-dark d-block">Suivi de l'Embarquement</strong>
+                            <small class="text-muted">{{ boarded_passengers }} embarqué(s) sur {{ total_passengers }} passager(s) attendu(s)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1 text-muted">
+                        <span>Taux de présence</span>
+                        <span class="text-dark">{{ boarding_percentage }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px; background-color: #cbd5e1; border-radius: 4px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ boarding_percentage }}%;"></div>
+                    </div>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <span class="badge {% if pending_passengers == 0 and total_passengers > 0 %}bg-success{% else %}bg-warning text-warning-emphasis{% endif %} rounded-pill px-3 py-1.5 fw-semibold">
+                        {% if pending_passengers == 0 and total_passengers > 0 %}
+                            Complet / Tous à bord
+                        {% else %}
+                            {{ pending_passengers }} passager(s) en attente
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Barre de recherche instantanée (Consultation) -->
+        <div class="mt-3">
+            <input type="text" id="passenger-search-input" class="form-control rounded-pill px-3.5 py-2 shadow-xs" 
+                   placeholder="Rechercher un voyageur par son nom, numéro de téléphone ou référence...">
+        </div>
+    </div>
+
+    <!-- En-tête officiel de la Feuille de Route / Manifeste -->
+    <div class="header-title d-flex justify-content-between align-items-start">
+        <div>
+            <h6 class="fw-bold text-uppercase mb-0 text-muted" style="letter-spacing: 1px;">RÉPUBLIQUE DU CAMEROUN</h6>
+            <small class="text-muted">Paix - Travail - Patrie • Ministère des Transports</small>
+            <h2 class="fw-bold mt-2 mb-0 text-dark">{{ departure.agency.name }}</h2>
+            <small class="text-secondary fw-semibold">Agrément Transport Interurbain • Ligne : {{ departure.line.name }}</small>
+        </div>
+        <div class="text-end">
+            <span class="badge bg-dark fs-6 px-3 py-2 text-uppercase rounded-1">BORDEREAU D'EMBARQUEMENT</span>
+            <div class="mt-2 text-muted small">Édition : {% now "d/m/Y à H:i" %}</div>
+        </div>
+    </div>
+
+    <!-- Détails du Voyage, Flotte & Chauffeur -->
+    <div class="meta-box">
+        <div class="row g-3">
+            <div class="col-sm-3 col-6">
+                <span class="text-muted d-block small">Date de départ</span>
+                <strong class="text-dark">{{ departure.date|date:"l d F Y" }}</strong>
+            </div>
+            <div class="col-sm-3 col-6">
+                <span class="text-muted d-block small">Heure de départ</span>
+                <strong class="fs-5 text-primary">{{ departure.time|time:"H:i" }}</strong>
+            </div>
+            <div class="col-sm-3 col-6">
+                <span class="text-muted d-block small">Véhicule assigné</span>
+                <strong class="text-dark">{{ departure.vehicle.registration|default:"Standard" }}</strong>
+                <div class="text-muted small">({{ departure.vehicle.vehicle_type|default:"Bus" }} - {{ departure.total_capacity }} pl.)</div>
+            </div>
+            <div class="col-sm-3 col-6">
+                <span class="text-muted d-block small">Conducteur principal</span>
+                <strong class="text-dark">{{ departure.driver.full_name|default:"Non assigné" }}</strong>
+                {% if departure.driver.license_number %}
+                <div class="text-muted small">Permis : {{ departure.driver.license_number }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau officiel des Passagers -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm mb-4 align-middle" id="passengers-table">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 35px;">N°</th>
+                    <th style="width: 100px;">Réf. Billet</th>
+                    <th>Nom et Prénom du Passager</th>
+                    <th style="width: 170px;">Pièce d'Identité (CNI / Pass.)</th>
+                    <th style="width: 125px;">Téléphone</th>
+                    <th style="width: 155px;">Tronçon</th>
+                    <th class="text-center" style="width: 50px;">Places</th>
+                    <th class="text-center" style="width: 90px;">Règlement</th>
+                    <th class="text-center" style="width: 110px;">Émargement</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in valid_bookings %}
+                <tr class="passenger-row">
+                    <td class="text-center fw-bold text-secondary">{{ forloop.counter }}</td>
+                    <td class="fw-semibold text-primary font-monospace small">{{ b.reference }}</td>
+                    <td class="fw-bold text-dark passenger-name">{{ b.traveler_name }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark border me-1 small">{{ b.get_id_type_display|default:b.id_type }}</span>
+                        <strong class="font-monospace small">{{ b.id_number }}</strong>
+                    </td>
+                    <td class="small text-nowrap passenger-phone">{{ b.traveler_phone|format_phone }}</td>
+                    <td class="small">
+                        {{ b.departure_stop.city.name|default:"Départ" }} ➔ {{ b.arrival_stop.city.name|default:"Arrivée" }}
+                    </td>
+                    <td class="text-center fw-bold">{{ b.seats_reserved }}</td>
+                    
+                    <!-- Statut Règlement -->
+                    <td class="text-center">
+                        {% if b.payment_status == 'paid' %}
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">
+                                Encaissé
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">
+                                À encaisser
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Suivi Interactif d'Embarquement (Check-in en direct) -->
+                    <td class="text-center">
+                        <div class="no-print">
+                            {% if b.status == 'boarded' %}
+                                <form method="post" class="d-inline m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_boarded">
+                                    <input type="hidden" name="booking_id" value="{{ b.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-2 py-0.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" title="Cliquer pour annuler l'embarquement">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        <span style="font-size: 0.72rem;">Embarqué</span>
+                                    </button>
+                                </form>
+                            {% else %}
+                                <form method="post" class="d-inline m-0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="toggle_boarded">
+                                    <input type="hidden" name="booking_id" value="{{ b.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-0.5 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" title="Valider l'embarquement (Check-in)">
+                                        <span style="font-size: 0.72rem;">Embarquer</span>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
+
+                        <!-- Émargement physique visible à l'impression -->
+                        <div class="d-none d-print-block">
+                            {% if b.status == 'boarded' %}
+                                <strong style="font-size: 10px;">[V] EMBARQUÉ</strong>
+                            {% else %}
+                                <span style="font-size: 11px;">[ &nbsp; ] _________</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-4 text-muted">
+                        Aucun passager enregistré pour ce départ.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Signatures Officielles & Cachets -->
+    <div class="row g-4 mt-3">
+        <div class="col-4">
+            <div class="fw-bold small text-dark">Le Chef d'Agence / Guichetier :</div>
+            <div class="signature-box text-muted small">
+                Visa & Cachet de l'Agence
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="fw-bold small text-dark">Le Conducteur Titulaire :</div>
+            <div class="signature-box text-muted small">
+                Nom : <strong>{{ departure.driver.full_name|default:"........................" }}</strong><br>
+                Signature :
+            </div>
+        </div>
+        <div class="col-4">
+            <div class="fw-bold small text-dark">Contrôle Routier (Police / Gendarmerie) :</div>
+            <div class="signature-box text-muted small">
+                Visa de Contrôle en Route
+            </div>
+        </div>
+    </div>
+
+    <!-- Mentions légales obligatoires -->
+    <div class="mt-4 pt-3 border-top text-center text-muted" style="font-size: 10px;">
+        Document officiel de transport interurbain obligatoire à bord du véhicule. Conforme aux arrêtés du Ministère des Transports de la République du Cameroun.
+    </div>
+
+</div>
+
+<!-- Filtrage en direct JS des passagers -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById("passenger-search-input");
+        if (searchInput) {
+            searchInput.addEventListener("input", function() {
+                const query = this.value.toLowerCase().trim();
+                const rows = document.querySelectorAll("#passengers-table tbody tr.passenger-row");
+                rows.forEach(function(row) {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(query)) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

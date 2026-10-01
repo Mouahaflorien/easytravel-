@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Portail Agence{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    {% block extra_css %}{% endblock %}
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow-x: hidden; min-height: 100vh; }
+        
+        /* Badges de statuts accessibles (WCAG AAA) */
+        .badge-status-scheduled {
+            background-color: #e0f2fe !important;
+            color: #0369a1 !important;
+            border: 1px solid #bae6fd !important;
+        }
+        .badge-status-boarding {
+            background-color: #fef3c7 !important;
+            color: #854d0e !important;
+            border: 1px solid #fde68a !important;
+        }
+        .badge-status-departed {
+            background-color: #dcfce7 !important;
+            color: #15803d !important;
+            border: 1px solid #bbf7d0 !important;
+        }
+        .badge-status-cancelled {
+            background-color: #fee2e2 !important;
+            color: #991b1b !important;
+            border: 1px solid #fecaca !important;
+        }
+
+        /* Boutons d'actions circulaires épurés */
+        .btn-action-icon {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #64748b;
+            transition: all 0.15s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+            text-decoration: none;
+        }
+        .btn-action-icon:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+        }
+        .btn-action-icon.btn-action-delete:hover {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border-color: #fca5a5;
+        }
+        .sidebar {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            min-width: 280px;
+            background-color: #0f172a;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            z-index: 1020;
+            overflow-y: auto;
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        
+        /* Navigation Sidebar Moderne avec Icônes SVG */
+        .sidebar .nav-link {
+            color: #94a3b8;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 10px;
+            margin: 4px 14px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.15s ease;
+        }
+        .sidebar .nav-link svg {
+            color: #64748b;
+            transition: color 0.15s ease;
+            flex-shrink: 0;
+        }
+        .sidebar .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.06);
+            color: #f8fafc;
+        }
+        .sidebar .nav-link:hover svg {
+            color: #cbd5e1;
+        }
+        .sidebar .nav-link.active {
+            background-color: #2563eb;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .sidebar .nav-link.active svg {
+            color: #ffffff;
+        }
+        
+        .sidebar-brand {
+            padding: 18px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .main-content {
+            flex-grow: 1;
+            min-width: 0;
+            padding: 20px 32px;
+        }
+        
+        /* Cartes statistiques & Tableaux */
+        .stat-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+        }
+        .stat-title {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #64748b;
+            font-weight: 600;
+        }
+        .stat-value {
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .table-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+        .table-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .table-header h5 {
+            margin: 0;
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 1rem;
+        }
+        .table th {
+            font-weight: 600;
+            color: #64748b;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom-width: 1px;
+        }
+        .table td {
+            vertical-align: middle;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+
+        /* Topbar & Espacement vertical resserré */
+        .topbar {
+            padding: 0 0 14px 0;
+            margin-bottom: 18px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        /* Pied de Sidebar épuré */
+        .sidebar-user-card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 10px 12px;
+            transition: all 0.2s ease;
+        }
+        .sidebar-user-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.14);
+        }
+        .sidebar-logout-icon-btn {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            padding: 7px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .sidebar-logout-icon-btn:hover {
+            color: #f87171;
+            background: rgba(239, 68, 68, 0.18);
+            transform: scale(1.05);
+        }
+
+        /* Topbar Profil Pill & Dropdown */
+        .topbar-user-pill {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 50px;
+            padding: 4px 14px 4px 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            text-decoration: none !important;
+            color: #1e293b !important;
+        }
+        .topbar-user-pill:hover, .topbar-user-pill[aria-expanded="true"] {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            background: #f8fafc;
+        }
+        .topbar-user-pill::after {
+            display: none !important;
+        }
+        .topbar-chevron {
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+        }
+        .topbar-user-pill[aria-expanded="true"] .topbar-chevron {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu-profile {
+            min-width: 250px;
+            border-radius: 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+            padding: 8px;
+            margin-top: 10px !important;
+            animation: fadeInDropdown 0.15s ease-out;
+        }
+        @keyframes fadeInDropdown {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .dropdown-menu-profile .dropdown-item {
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            color: #334155;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+        }
+        .dropdown-menu-profile .dropdown-item:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        .dropdown-menu-profile .dropdown-item.item-logout {
+            color: #64748b;
+        }
+        .dropdown-menu-profile .dropdown-item.item-logout:hover {
+            background-color: #fef2f2;
+            color: #dc2626 !important;
+        }
+
+        /* Support Dynamique Thème Sombre & Couleurs */
+        body.dark-mode {
+            background-color: #0b1120 !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark-mode .main-content {
+            background-color: #0b1120 !important;
+        }
+        body.dark-mode .stat-card,
+        body.dark-mode .table-card,
+        body.dark-mode .card,
+        body.dark-mode .modal-content,
+        body.dark-mode .topbar-user-pill,
+        body.dark-mode .dropdown-menu-profile {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+        body.dark-mode .table-header {
+            border-color: #334155 !important;
+        }
+        body.dark-mode .table th {
+            color: #94a3b8 !important;
+            border-color: #334155 !important;
+        }
+        body.dark-mode .table td {
+            color: #cbd5e1 !important;
+            border-color: #334155 !important;
+        }
+        body.dark-mode .topbar {
+            border-color: #334155 !important;
+        }
+        body.dark-mode .text-dark {
+            color: #f8fafc !important;
+        }
+        body.dark-mode .text-muted {
+            color: #94a3b8 !important;
+        }
+        body.dark-mode .bg-light {
+            background-color: #0f172a !important;
+        }
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: #0f172a !important;
+            border-color: #334155 !important;
+            color: #f1f5f9 !important;
+        }
+
+        /* Charte Graphique Standard & Personnalisable de l'Agence */
+        {% with brand_color=current_agency.primary_color|default:"#2563eb" %}
+        :root {
+            --bs-primary: {{ brand_color }};
+            --theme-primary: {{ brand_color }};
+        }
+        .bg-primary {
+            background-color: {{ brand_color }} !important;
+        }
+        .text-primary {
+            color: {{ brand_color }} !important;
+        }
+        .btn-primary {
+            background-color: {{ brand_color }} !important;
+            border-color: {{ brand_color }} !important;
+        }
+        .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+            filter: brightness(0.92);
+            background-color: {{ brand_color }} !important;
+            border-color: {{ brand_color }} !important;
+        }
+        .btn-outline-primary {
+            color: {{ brand_color }} !important;
+            border-color: {{ brand_color }} !important;
+        }
+        .btn-outline-primary:hover {
+            background-color: {{ brand_color }} !important;
+            border-color: {{ brand_color }} !important;
+            color: #ffffff !important;
+        }
+        .sidebar .nav-link.active {
+            background-color: {{ brand_color }} !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        .badge.bg-primary.bg-opacity-10 {
+            background-color: rgba(37, 99, 235, 0.12) !important;
+            color: {{ brand_color }} !important;
+        }
+        {% endwith %}
+    </style>
+    <script>
+        (function() {
+            const theme = "{{ current_agency.theme_mode|default:'light' }}";
+            const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            if (isDark) {
+                document.documentElement.classList.add('dark-mode');
+                document.addEventListener("DOMContentLoaded", function() {
+                    document.body.classList.add('dark-mode');
+                });
+            }
+        })();
+    </script>
+</head>
+<body class="d-flex">
+    
+    <!-- Sidebar (Toujours visible et fixe sur l'écran) -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <div class="d-flex align-items-center">
+                {% if current_agency.logo %}
+                    <img src="{{ current_agency.logo.url }}" width="40" height="40" class="rounded-3 me-2 object-fit-cover shadow-sm flex-shrink-0" alt="Logo">
+                {% else %}
+                    <div class="bg-primary text-white rounded-3 d-flex align-items-center justify-content-center fw-bold me-2 flex-shrink-0 shadow-sm" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                        {{ current_agency.name|make_list|first|upper|default:"A" }}
+                    </div>
+                {% endif %}
+                <div class="flex-grow-1 min-w-0">
+                    <div class="text-white fw-bold lh-sm text-truncate" style="font-size: 0.85rem;" title="{{ current_agency.name }}">
+                        {{ current_agency.name|default:"Mon Agence" }}
+                    </div>
+                    <div class="text-secondary text-uppercase fw-semibold" style="font-size: 0.65rem; letter-spacing: 0.6px; margin-top: 2px;">
+                        Portail Agence
+                    </div>
+                </div>
+            </div>
+        </div>
+        <ul class="nav flex-column mt-3">
+            <li class="nav-item">
+                <a href="{% url 'agencies:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="9"></rect>
+                        <rect x="14" y="3" width="7" height="5"></rect>
+                        <rect x="14" y="12" width="7" height="9"></rect>
+                        <rect x="3" y="16" width="7" height="5"></rect>
+                    </svg>
+                    <span>Tableau de bord</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'agencies:departure_list' %}" class="nav-link {% if 'departure' in request.resolver_match.url_name %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Départs</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'agencies:booking_list' %}" class="nav-link {% if 'booking' in request.resolver_match.url_name %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                        <path d="M13 5v2"></path>
+                        <path d="M13 17v2"></path>
+                        <path d="M13 11v2"></path>
+                    </svg>
+                    <span>Réservations</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'agencies:anomaly_list' %}" class="nav-link {% if 'anomal' in request.resolver_match.url_name %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <path d="M12 8v4"></path>
+                        <path d="M12 16h.01"></path>
+                    </svg>
+                    <span class="flex-grow-1">Sentinelle IA</span>
+                    {% if pending_anomalies_count > 0 %}
+                    <span class="badge bg-danger rounded-pill px-1.5 py-0.5 ms-auto" style="font-size: 0.68rem;" title="{{ pending_anomalies_count }} anomalie(s) à trancher">
+                        {{ pending_anomalies_count }}
+                    </span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'agencies:vehicle_list' %}" class="nav-link {% if 'vehicle' in request.resolver_match.url_name %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="3" width="15" height="13"></rect>
+                        <polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon>
+                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                    </svg>
+                    <span>Flotte</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'agencies:settings' %}" class="nav-link {% if request.resolver_match.url_name == 'settings' %}active{% endif %}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Paramètres</span>
+                </a>
+            </li>
+        </ul>
+        
+        <!-- Pied de Sidebar moderne avec carte profil et bouton discrètement intégré -->
+        <div class="mt-auto p-3 border-top border-secondary border-opacity-10">
+            <div class="sidebar-user-card d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center overflow-hidden me-2">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" width="34" height="34" class="rounded-circle object-fit-cover me-2 flex-shrink-0" alt="Avatar">
+                    {% else %}
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold me-2 flex-shrink-0" style="width: 34px; height: 34px; font-size: 0.85rem;">
+                            {{ user.username|make_list|first|upper }}
+                        </div>
+                    {% endif %}
+                    <div class="overflow-hidden">
+                        <div class="text-white small fw-medium text-truncate">{{ user.username }}</div>
+                        <div class="d-flex align-items-center text-secondary text-truncate" style="font-size: 0.72rem;">
+                            <span class="rounded-circle bg-success me-1 d-inline-block" style="width: 6px; height: 6px;"></span>
+                            <span>Connecté</span>
+                        </div>
+                    </div>
+                </div>
+                <form action="{% url 'agencies:logout' %}" method="post" class="mb-0">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-logout-icon-btn" title="Se déconnecter">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Topbar avec navigation et actions utilisateur -->
+        <div class="topbar d-flex justify-content-between align-items-center">
+            <div>
+                <a href="/" class="btn btn-sm btn-light border rounded-pill px-3 py-1 text-secondary fw-medium d-inline-flex align-items-center gap-2 shadow-xs" target="_blank" title="Ouvrir le site public">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                    </svg>
+                    <span>Voir le site public</span>
+                </a>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <!-- Badge Identité Agence (Fixe & Cloisonnée) -->
+                <div class="me-3 d-none d-sm-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-white border shadow-xs">
+                    <span class="rounded-circle bg-primary" style="width: 8px; height: 8px;"></span>
+                    <span class="fw-semibold text-dark small">{{ current_agency.name }}</span>
+                </div>
+
+
+                <!-- Cloche Notifications & Alertes Gemini -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-sm btn-white border rounded-circle p-2 position-relative shadow-xs d-flex align-items-center justify-content-center" 
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 36px; height: 36px; background: white;" title="Notifications & Alertes">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                        {% if unread_notifications_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" style="font-size: 0.65rem; padding: 0.25em 0.45em;">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border py-2" style="min-width: 320px; max-width: 360px;">
+                        <li class="px-3 py-1.5 d-flex justify-content-between align-items-center border-bottom pb-2 mb-1">
+                            <span class="fw-bold small text-dark">Alertes Sentinelle IA</span>
+                            <a href="{% url 'agencies:anomaly_list' %}" class="text-primary small text-decoration-none fw-semibold" style="font-size: 0.75rem;">Voir tout</a>
+                        </li>
+                        {% for notif in recent_notifications %}
+                        <li>
+                            <a class="dropdown-item py-2 px-3 d-flex gap-2 align-items-start" href="{% if notif.anomaly %}{% url 'agencies:anomaly_detail' notif.anomaly.id %}{% else %}{% url 'agencies:notification_list' %}{% endif %}">
+                                <div class="rounded-circle p-1 bg-{{ notif.level }} bg-opacity-10 text-{{ notif.level }} flex-shrink-0 mt-0.5">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                </div>
+                                <div class="min-w-0 flex-grow-1">
+                                    <div class="fw-semibold text-dark text-truncate small">{{ notif.title }}</div>
+                                    <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">{{ notif.message }}</small>
+                                    <small class="text-muted" style="font-size: 0.68rem;">{{ notif.created_at|timesince }}</small>
+                                </div>
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li class="px-3 py-3 text-center text-muted small">Aucune nouvelle alerte.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Menu Profil Utilisateur (Déconnexion intégrée au clic) -->
+                <div class="dropdown">
+
+                    <a class="topbar-user-pill dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" width="30" height="30" class="rounded-circle object-fit-cover" alt="Avatar">
+                        {% else %}
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                {{ user.username|make_list|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="text-start d-none d-md-block me-1">
+                            <div class="fw-semibold small text-dark lh-1">{{ user.username }}</div>
+                            <small class="text-muted" style="font-size: 0.7rem;">{{ current_agency.name|default:"Gestionnaire" }}</small>
+                        </div>
+                        <svg class="topbar-chevron ms-1" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-profile">
+                        <li class="px-3 py-2 border-bottom mb-1 bg-light rounded-top">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="fw-bold text-dark small">{{ user.username }}</span>
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill" style="font-size: 0.65rem;">En ligne</span>
+                            </div>
+                            <div class="text-muted text-truncate" style="font-size: 0.75rem;">Espace : {{ current_agency.name }}</div>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#userProfileModal">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2 text-secondary">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                <span>Mon Profil</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item py-2 d-flex align-items-center" href="{% url 'agencies:settings' %}">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2 text-secondary">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                                <span>Paramètres de l'Agence</span>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                            <form action="{% url 'agencies:logout' %}" method="post" class="m-0">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item item-logout w-100 text-start py-2 border-0 bg-transparent">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2 text-danger">
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                        <polyline points="16 17 21 12 16 7"></polyline>
+                                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                                    </svg>
+                                    <span>Se déconnecter</span>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+    {% block extra_js %}{% endblock %}
+
+    <!-- Modal Mon Profil -->
+    <div class="modal fade" id="userProfileModal" tabindex="-1" aria-labelledby="userProfileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="userProfileModalLabel">Mon Profil Utilisateur</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-3">
+                        {% if user.profile_picture %}
+                            <img src="{{ user.profile_picture.url }}" width="56" height="56" class="rounded-circle object-fit-cover shadow-sm" alt="Avatar">
+                        {% else %}
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4 shadow-sm" style="width: 56px; height: 56px;">
+                                {{ user.username|make_list|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">{{ user.get_full_name|default:user.username }}</h6>
+                            <small class="text-muted">{{ user.email|default:"Aucun email renseigné" }}</small>
+                            <div class="mt-1">
+                                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 0.72rem;">Administrateur Agence</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 small">
+                        <div class="col-6">
+                            <span class="text-muted d-block">Nom d'utilisateur</span>
+                            <strong class="text-dark">{{ user.username }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Téléphone</span>
+                            <strong class="text-dark">{{ user.phone|default:"Non renseigné" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Agence rattachée</span>
+                            <strong class="text-dark">{{ request.user.agencies_owned.first.name|default:"Non assignée" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Statut du compte</span>
+                            <span class="badge bg-success bg-opacity-10 text-success">Actif</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Paramètres de l'Agence -->
+    <div class="modal fade" id="agencySettingsModal" tabindex="-1" aria-labelledby="agencySettingsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="agencySettingsModalLabel">Paramètres de l'Agence</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-light rounded-3 mb-3">
+                        <div class="fw-bold text-dark fs-6">{{ request.user.agencies_owned.first.name|default:"Mon Agence" }}</div>
+                        <small class="text-muted">Transport interurbain de voyageurs & fret</small>
+                    </div>
+                    <div class="row g-3 small">
+                        <div class="col-12">
+                            <span class="text-muted d-block">Agrément Ministériel</span>
+                            <strong class="text-dark">N° MINT-TRANS-CMR/2024-AGY</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Siège Social</span>
+                            <strong class="text-dark">Douala / Yaoundé</strong>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted d-block">Lignes Déclarées</span>
+                            <strong class="text-dark">{{ request.user.agencies_owned.first.lines.count|default:"Actives" }} lignes</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                    <a href="{% url 'agencies:settings' %}" class="btn btn-primary rounded-pill px-3 py-1.5 small fw-semibold">
+                        Ouvrir tous les paramètres
+                    </a>
+                    <button type="button" class="btn btn-light rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

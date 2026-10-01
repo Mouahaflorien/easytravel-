@@ -1,0 +1,47 @@
+# ==============================================================================
+# DOCKER-COMPOSE PRODUCTION POUR EASYTRAVEL
+# ==============================================================================
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-easytravel_db}
+      POSTGRES_USER: ${POSTGRES_USER:-easytravel_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword123}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-easytravel_user} -d ${POSTGRES_DB:-easytravel_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    restart: always
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --workers 3 --threads 2 --bind 0.0.0.0:8000 core.wsgi:application"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    env_file:
+      - ../../.env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER:-easytravel_user}:${POSTGRES_PASSWORD:-securepassword123}@db:5432/${POSTGRES_DB:-easytravel_db}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:

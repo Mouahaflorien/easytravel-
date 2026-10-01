@@ -1,0 +1,180 @@
+"""
+Automated Unit and Integration Tests for EasyTravel CinetPay Payments.
+Tests initiation, checking, IPN webhook handling, and UI redirections.
+Uses unittest.mock to guarantee 100% network isolation.
+"""
+
+from unittest.mock import patch, MagicMock
+from datetime import date, time
+from django.test import TestCase, Client
+from django.urls import reverse
+from accounts.models import User
+from agencies.models import Agency
+from travel.models import City, Line, LineStop, Departure
+from bookings.models import Booking
+from payments.services.cinetpay import CinetPayService
+
+
+class CinetPayPaymentTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='voyageur_test', 
+            password='secretpassword123',
+            first_name='Jean',
+            last_name='Kamga',
+            email='jean.kamga@test.cm',
+            phone='699001122'
+        )
+        self.owner = User.objects.create_user(username='agency_admin', password='password')
+        self.agency = Agency.objects.create(name="Cameroon Express", owner=self.owner)
+        self.city_douala = City.objects.create(name="Douala")
+        self.city_yaounde = City.objects.create(name="Yaoundé")
+        self.line = Line.objects.create(agency=self.agency, name="Douala - Yaoundé")
+        self.stop_1 = LineStop.objects.create(line=self.line, city=self.city_douala, stop_order=1, price_from_start=0)
+        self.stop_2 = LineStop.objects.create(line=self.line, city=self.city_yaounde, stop_order=2, price_from_start=5000)
+        self.departure = Departure.objects.create(
+            agency=self.agency,
+            line=self.line,
+            date=date.today(),
+            time=time(7, 0),
+            available_capacity=45
+        )
+        self.booking = Booking.objects.create(
+            user=self.user,
+            departure=self.departure,
+            departure_stop=self.stop_1,
+            arrival_stop=self.stop_2,
+            traveler_name="Jean Kamga",
+            traveler_phone="237699001122",
+            traveler_email="jean.kamga@test.cm",
+            id_type="CNI",
+            id_number="112233445",
+            seats_reserved=1,
+            total_amount=5000,
+            status='confirmed',
+            payment_status='pending',
+            payment_method='online'
+        )
+
+    def test_service_unconfigured_behavior(self):
+        """When keys are missing, service safely aborts without crashing."""
+        service = CinetPayService()
+        service.site_id = ""
+        service.api_key = ""
+        self.assertFalse(service.is_configured())
+        success, result, tx_id = service.initiate_payment(
+            booking=self.booking,
+            return_url="http://test/return",
+            notify_url="http://test/notify"
+        )
+        self.assertFalse(success)
+        self.assertIn("non configurée", result["message"])
+
+    @patch('payments.services.cinetpay.requests.post')
+    def test_service_initiate_payment_success(self, mock_post):
+        """Simulates successful checkout creation on CinetPay API."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "code": "201",
+            "message": "CREATED",
+            "data": {
+                "payment_token": "token_cinetpay_abc123",
+                "payment_url": "https://checkout.cinetpay.com/pay/token_cinetpay_abc123"
+            }
+        }
+        mock_post.return_value = mock_response
+
+        service = CinetPayService()
+        service.site_id = "123456"
+        service.api_key = "test_api_key"
+
+        success, result, tx_id = service.initiate_payment(
+            booking=self.booking,
+            return_url="http://test/return",
+            notify_url="http://test/notify"
+        )
+
+        self.assertTrue(success)
+        self.assertEqual(result["payment_url"], "https://checkout.cinetpay.com/pay/token_cinetpay_abc123")
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.transaction_id, tx_id)
+        self.assertEqual(self.booking.payment_operator, "cinetpay")
+
+    @patch('payments.services.cinetpay.requests.post')
+    def test_service_check_and_update_booking_accepted(self, mock_post):
+        """Simulates verified CinetPay payment confirmation (status ACCEPTED)."""
+        tx_id = "ET-TX-TEST-999"
+        self.booking.transaction_id = tx_id
+        self.booking.save()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "code": "00",
+            "message": "SUCCES",
+            "data": {
+                "amount": 5000,
+                "currency": "XAF",
+                "status": "ACCEPTED",
+                "operator_id": "ORANGE_MONEY_CMR",
+                "payment_method": "OM"
+            }
+        }
+        mock_post.return_value = mock_response
+
+        service = CinetPayService()
+        service.site_id = "123456"
+        service.api_key = "test_api_key"
+
+        updated, b, msg = service.verify_and_update_booking(tx_id)
+
+        self.assertTrue(updated)
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.payment_status, 'paid')
+        self.assertEqual(self.booking.payment_operator, 'ORANGE_MONEY_CMR')
+        self.assertIsNotNone(self.booking.paid_at)
+
+    @patch.object(CinetPayService, 'is_configured', return_value=True)
+    @patch.object(CinetPayService, 'initiate_payment')
+    def test_view_initiate_booking_payment_redirects_to_cinetpay(self, mock_initiate, mock_configured):
+        """View initiates payment and redirects user to CinetPay payment URL."""
+        mock_initiate.return_value = (
+            True, 
+            {"payment_url": "https://checkout.cinetpay.com/pay/xyz789"}, 
+            "ET-TX-1-ABCD"
+        )
+        self.client.login(username='voyageur_test', password='secretpassword123')
+        url = reverse('payments:initiate', kwargs={'booking_id': self.booking.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, "https://checkout.cinetpay.com/pay/xyz789")
+
+    @patch.object(CinetPayService, 'verify_and_update_booking')
+    def test_view_cinetpay_notification_ipn_webhook(self, mock_verify):
+        """Validates that CinetPay IPN webhook triggers verification and returns 200."""
+        mock_verify.return_value = (True, self.booking, "Paiement validé avec succès.")
+        url = reverse('payments:notification')
+
+        # CinetPay IPN sends POST with cpm_trans_id
+        response = self.client.post(url, data={'cpm_trans_id': 'ET-TX-TEST-IPN'})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['status'], 'success')
+        mock_verify.assert_called_once_with('ET-TX-TEST-IPN')
+
+    @patch.object(CinetPayService, 'verify_and_update_booking')
+    def test_view_cinetpay_return_redirects_to_confirmation(self, mock_verify):
+        """User returning from CinetPay is safely redirected to booking confirmation page."""
+        self.booking.payment_status = 'paid'
+        self.booking.save()
+        mock_verify.return_value = (True, self.booking, "Paiement validé avec succès.")
+
+        url = f"{reverse('payments:return')}?transaction_id=ET-TX-RETURN-1"
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 302)
+        expected_url = reverse('bookings:confirmation', kwargs={'reference': self.booking.reference})
+        self.assertEqual(response.url, expected_url)

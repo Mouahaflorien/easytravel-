@@ -1,0 +1,47 @@
+# ==============================================================================
+# SERVICE SYSTEMD GUNICORN POUR EASYTRAVEL (CONTABO VPS)
+# ==============================================================================
+# Emplacement sur le serveur : /etc/systemd/system/easytravel.service
+# Commandes :
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable easytravel
+#   sudo systemctl start easytravel
+#   sudo systemctl status easytravel
+
+[Unit]
+Description=EasyTravel Gunicorn WSGI Application Server
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/easytravel
+EnvironmentFile=/var/www/easytravel/.env
+
+# Création automatique du dossier /run/easytravel avec permissions www-data
+RuntimeDirectory=easytravel
+RuntimeDirectoryMode=0755
+
+ExecStart=/var/www/easytravel/venv/bin/gunicorn \
+    --workers 3 \
+    --threads 2 \
+    --worker-class gthread \
+    --bind unix:/run/easytravel/gunicorn.sock \
+    --access-logfile /var/log/easytravel/gunicorn_access.log \
+    --error-logfile /var/log/easytravel/gunicorn_error.log \
+    --capture-output \
+    --log-level info \
+    --timeout 90 \
+    core.wsgi:application
+
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=10
+PrivateTmp=true
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

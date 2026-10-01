@@ -1,0 +1,356 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+{% block title %}Vente au Guichet - Nouvelle Réservation{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <a href="{% url 'agencies:booking_list' %}" class="btn btn-sm btn-light border text-secondary rounded-pill px-3 py-1 mb-2 d-inline-flex align-items-center gap-1.5 shadow-xs">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Retour aux réservations</span>
+            </a>
+            <h3 class="fw-bold mb-0 text-dark">Vente au Guichet & Émission de Billet</h3>
+            <p class="text-muted small mb-0 mt-1">Enregistrement immédiat d'un passager et validation de l'encaissement.</p>
+        </div>
+        <div>
+            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span>Guichet Ouvert</span>
+            </span>
+        </div>
+    </div>
+</div>
+
+<form method="post" id="agencyBookingForm">
+    {% csrf_token %}
+    <div class="row g-4">
+        <!-- Colonne Gauche : Formulaire Saisie Guichetier -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 bg-white p-4">
+                
+                <!-- 1. Sélection du Départ & Bus -->
+                <div class="mb-4 pb-3 border-bottom">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <span class="p-1.5 rounded-2 bg-primary bg-opacity-10 text-primary d-inline-flex">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </span>
+                        <span>1. Voyage & Ligne</span>
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">{{ form.departure.label }} <span class="text-danger">*</span></label>
+                        {{ form.departure }}
+                        {% if form.departure.errors %}
+                        <div class="text-danger small mt-1">{{ form.departure.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted">{{ form.departure_stop.label }} <span class="text-danger">*</span></label>
+                            {{ form.departure_stop }}
+                            {% if form.departure_stop.errors %}
+                            <div class="text-danger small mt-1">{{ form.departure_stop.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted">{{ form.arrival_stop.label }} <span class="text-danger">*</span></label>
+                            {{ form.arrival_stop }}
+                            {% if form.arrival_stop.errors %}
+                            <div class="text-danger small mt-1">{{ form.arrival_stop.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Informations du Passager (Contrôle CNI) -->
+                <div class="mb-4 pb-3 border-bottom">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <span class="p-1.5 rounded-2 bg-primary bg-opacity-10 text-primary d-inline-flex">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </span>
+                        <span>2. Identité du Passager</span>
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-muted">{{ form.traveler_name.label }} <span class="text-danger">*</span></label>
+                        {{ form.traveler_name }}
+                        {% if form.traveler_name.errors %}
+                        <div class="text-danger small mt-1">{{ form.traveler_name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted">{{ form.traveler_phone.label }} <span class="text-danger">*</span></label>
+                            {{ form.traveler_phone }}
+                            {% if form.traveler_phone.errors %}
+                            <div class="text-danger small mt-1">{{ form.traveler_phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-muted">{{ form.traveler_email.label }}</label>
+                            {{ form.traveler_email }}
+                            {% if form.traveler_email.errors %}
+                            <div class="text-danger small mt-1">{{ form.traveler_email.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-sm-5">
+                            <label class="form-label fw-bold small text-muted">{{ form.id_type.label }} <span class="text-danger">*</span></label>
+                            {{ form.id_type }}
+                        </div>
+                        <div class="col-sm-7">
+                            <label class="form-label fw-bold small text-muted">{{ form.id_number.label }} <span class="text-danger">*</span></label>
+                            {{ form.id_number }}
+                            {% if form.id_number.errors %}
+                            <div class="text-danger small mt-1">{{ form.id_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Places & Modalité d'Encaissement -->
+                <div>
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <span class="p-1.5 rounded-2 bg-success bg-opacity-10 text-success d-inline-flex">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </span>
+                        <span>3. Places & Encaissement</span>
+                    </h5>
+
+                    <div class="row g-3">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-bold small text-muted">{{ form.seats_reserved.label }} <span class="text-danger">*</span></label>
+                            {{ form.seats_reserved }}
+                            {% if form.seats_reserved.errors %}
+                            <div class="text-danger small mt-1">{{ form.seats_reserved.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-bold small text-muted">{{ form.payment_method.label }}</label>
+                            {{ form.payment_method }}
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-bold small text-muted">{{ form.payment_status.label }}</label>
+                            {{ form.payment_status }}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Colonne Droite : Récapitulatif Financier & Émission -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden sticky-top" style="top: 90px;">
+                <div class="card-header bg-dark text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge bg-primary rounded-pill px-3 py-1">Émission Immédiate</span>
+                        <small class="text-white-50">Guichet Agence</small>
+                    </div>
+                    <h5 class="fw-bold mb-0 text-white mt-2" id="summaryRouteTitle">
+                        Trajet sélectionné
+                    </h5>
+                </div>
+
+                <div class="card-body p-4">
+                    <ul class="list-unstyled mb-4">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Tarif unitaire :</span>
+                            <strong class="text-dark"><span id="unitPriceDisplay">0</span> FCFA</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Nombre de places :</span>
+                            <strong class="text-dark"><span id="seatsCountDisplay">1</span> place(s)</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Statut règlement :</span>
+                            <span id="paymentStatusBadge" class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 fw-semibold">
+                                Paiement à enregistrer
+                            </span>
+                        </li>
+                    </ul>
+
+                    <!-- Montant Total Grand Format -->
+                    <div class="bg-light rounded-3 p-3 text-center mb-4 border">
+                        <div class="text-muted small text-uppercase fw-semibold">Total à Encaisser</div>
+                        <div class="display-6 fw-bold text-dark my-1">
+                            <span id="totalPriceDisplay">0</span> <span class="fs-5 fw-semibold text-secondary">FCFA</span>
+                        </div>
+                        <small class="text-muted" id="paymentMethodHint">Paiement en espèces au guichet</small>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary rounded-pill py-3 fw-bold fs-5 shadow-xs d-flex align-items-center justify-content-center gap-2">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Valider l'Encaissement & Émettre</span>
+                        </button>
+                        <a href="{% url 'agencies:dashboard' %}" class="btn btn-light rounded-pill py-2 text-muted fw-medium">
+                            Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const depSelect = document.getElementById("booking-departure-select");
+    const startSelect = document.getElementById("booking-start-stop-select");
+    const endSelect = document.getElementById("booking-end-stop-select");
+    const seatsInput = document.getElementById("booking-seats-input");
+    const paymentStatusSelect = document.querySelector('select[name="payment_status"]');
+    const paymentMethodSelect = document.querySelector('select[name="payment_method"]');
+
+    const unitPriceDisplay = document.getElementById("unitPriceDisplay");
+    const seatsCountDisplay = document.getElementById("seatsCountDisplay");
+    const totalPriceDisplay = document.getElementById("totalPriceDisplay");
+    const summaryRouteTitle = document.getElementById("summaryRouteTitle");
+    const paymentStatusBadge = document.getElementById("paymentStatusBadge");
+    const paymentMethodHint = document.getElementById("paymentMethodHint");
+
+    // Données des départs et arrêts pour mise à jour dynamique
+    const departuresData = {
+        {% for dep in active_departures %}
+        "{{ dep.id }}": {
+            "name": "{{ dep.line.name|escapejs }}",
+            "capacity": {{ dep.available_capacity }},
+            "stops": [
+                {% for stop in dep.line.stops.all %}
+                { "id": {{ stop.id }}, "name": "{{ stop.city.name|escapejs }}", "order": {{ stop.stop_order }}, "price": {{ stop.price_from_start|stringformat:".2f" }} },
+                {% endfor %}
+            ]
+        },
+        {% endfor %}
+    };
+
+    function updateStopsForDeparture() {
+        const depId = depSelect.value;
+        const depInfo = departuresData[depId];
+        if (!depInfo || !depInfo.stops || depInfo.stops.length === 0) return;
+
+        const currentStart = startSelect.value;
+        const currentEnd = endSelect.value;
+
+        startSelect.innerHTML = "";
+        endSelect.innerHTML = "";
+
+        depInfo.stops.forEach(function(stop, index) {
+            const optStart = new Option(stop.name, stop.id);
+            optStart.dataset.order = stop.order;
+            optStart.dataset.price = stop.price;
+            startSelect.add(optStart);
+
+            const optEnd = new Option(stop.name, stop.id);
+            optEnd.dataset.order = stop.order;
+            optEnd.dataset.price = stop.price;
+            endSelect.add(optEnd);
+        });
+
+        // Définir premier et dernier arrêt par défaut
+        startSelect.selectedIndex = 0;
+        endSelect.selectedIndex = depInfo.stops.length - 1;
+
+        if (seatsInput) {
+            seatsInput.max = depInfo.capacity;
+        }
+
+        recalculatePrice();
+    }
+
+    function recalculatePrice() {
+        const depId = depSelect.value;
+        const depInfo = departuresData[depId];
+        
+        let startOpt = startSelect.options[startSelect.selectedIndex];
+        let endOpt = endSelect.options[endSelect.selectedIndex];
+
+        let unitPrice = 0;
+        let startName = startOpt ? startOpt.text : "Départ";
+        let endName = endOpt ? endOpt.text : "Arrivée";
+
+        if (startOpt && endOpt) {
+            const startPrice = parseFloat(startOpt.dataset.price || 0);
+            const endPrice = parseFloat(endOpt.dataset.price || 0);
+            unitPrice = Math.max(0, endPrice - startPrice);
+        }
+
+        let seats = parseInt(seatsInput.value, 10);
+        if (isNaN(seats) || seats < 1) seats = 1;
+
+        const total = unitPrice * seats;
+
+        unitPriceDisplay.textContent = unitPrice.toLocaleString("fr-FR").replace(/\u202F/g, ' ');
+        seatsCountDisplay.textContent = seats;
+        totalPriceDisplay.textContent = total.toLocaleString("fr-FR").replace(/\u202F/g, ' ');
+        summaryRouteTitle.innerHTML = `${startName} <span class="text-warning">➔</span> ${endName}`;
+    }
+
+    function updatePaymentInfo() {
+        if (paymentStatusSelect && paymentStatusBadge) {
+            if (paymentStatusSelect.value === 'paid') {
+                paymentStatusBadge.className = "badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2.5 py-1 fw-semibold";
+                paymentStatusBadge.textContent = "Paiement à enregistrer (Comptoir)";
+            } else {
+                paymentStatusBadge.className = "badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 px-2.5 py-1 fw-semibold";
+                paymentStatusBadge.textContent = "Paiement différé / En attente";
+            }
+        }
+        if (paymentMethodSelect && paymentMethodHint) {
+            const opt = paymentMethodSelect.options[paymentMethodSelect.selectedIndex];
+            paymentMethodHint.textContent = "Mode de règlement prévu : " + (opt ? opt.text : "Espèces");
+        }
+    }
+
+    if (depSelect) {
+        depSelect.addEventListener("change", updateStopsForDeparture);
+    }
+    if (startSelect) {
+        startSelect.addEventListener("change", recalculatePrice);
+    }
+    if (endSelect) {
+        endSelect.addEventListener("change", recalculatePrice);
+    }
+    if (seatsInput) {
+        seatsInput.addEventListener("input", recalculatePrice);
+        seatsInput.addEventListener("change", recalculatePrice);
+    }
+    if (paymentStatusSelect) {
+        paymentStatusSelect.addEventListener("change", updatePaymentInfo);
+    }
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener("change", updatePaymentInfo);
+    }
+
+    // Initialisation
+    updateStopsForDeparture();
+    updatePaymentInfo();
+});
+</script>
+{% endblock %}

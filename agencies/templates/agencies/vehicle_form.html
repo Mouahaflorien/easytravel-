@@ -1,0 +1,39 @@
+{% extends 'agencies/base_agency.html' %}
+{% block title %}Véhicule - Mon Agence{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'agencies:vehicle_list' %}" class="btn btn-sm btn-light border text-secondary rounded-pill px-3 py-1 mb-2 d-inline-flex align-items-center gap-1.5 shadow-xs">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Retour à la flotte</span>
+    </a>
+    <h3 class="fw-bold mb-0 text-dark">{% if object %}Modifier le véhicule{% else %}Ajouter un véhicule{% endif %}</h3>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4" style="max-width: 600px;">
+    <div class="card-body p-4">
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-muted">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                <div class="form-text small text-muted mt-1">{{ field.help_text }}</div>
+                {% endif %}
+                {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="mt-4 text-end">
+                <a href="{% url 'agencies:vehicle_list' %}" class="btn btn-light rounded-pill px-4 me-2">Annuler</a>
+                <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-xs">Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

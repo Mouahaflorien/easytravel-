@@ -1,0 +1,419 @@
+{% extends 'travel/base.html' %}
+{% load agency_extras %}
+
+{% block title %}Résultats de recherche{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Style du Slider / Carousel de dates */
+    .date-nav-wrapper {
+        background: white;
+        border-radius: 18px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+        margin-bottom: 28px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .date-slider-container {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+    }
+    
+    .date-slider {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+        padding: 6px 2px;
+        flex-grow: 1;
+    }
+    .date-slider::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+    }
+    
+    .date-card {
+        min-width: 105px;
+        flex-shrink: 0;
+        text-align: center;
+        border-radius: 14px;
+        padding: 10px 12px;
+        border: 1.5px solid #e2e8f0;
+        background: #f8fafc;
+        text-decoration: none;
+        color: #334155;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    .date-card:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+        color: #1d4ed8;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    }
+    .date-card.active {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white !important;
+        border-color: #2563eb;
+        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+        transform: scale(1.03);
+    }
+    .date-card.active .text-muted {
+        color: rgba(255, 255, 255, 0.85) !important;
+    }
+    .date-card.active .badge-today {
+        background-color: rgba(255, 255, 255, 0.3) !important;
+        color: white !important;
+    }
+
+    .slider-nav-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        border: 1.5px solid #cbd5e1;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        color: #475569;
+        transition: all 0.2s;
+        cursor: pointer;
+        flex-shrink: 0;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .slider-nav-btn:hover {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+        transform: scale(1.08);
+        box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Animation badge auto */
+    .auto-badge {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e40af;
+        border-radius: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header recherche -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            {% if departure_city and arrival_city %}
+                <h2 class="fw-bold mb-1 d-flex align-items-center gap-2" style="color: #0f172a;">
+                    <span>{{ departure_city.name }}</span>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                    <span>{{ arrival_city.name }}</span>
+                </h2>
+            {% else %}
+                <h2 class="fw-bold mb-1" style="color: #0f172a;">Tous les départs disponibles</h2>
+            {% endif %}
+            <p class="text-muted mb-0 d-flex align-items-center gap-2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <strong>{{ selected_date_display }}</strong>
+                {% if is_today %}
+                    <span class="badge bg-success bg-opacity-10 text-success ms-1">Aujourd'hui</span>
+                    <span class="text-secondary small ms-1">(à partir de {{ current_time_display }})</span>
+                {% endif %}
+            </p>
+        </div>
+        <a href="{% url 'travel:home' %}" class="btn btn-outline-secondary rounded-pill px-4 d-inline-flex align-items-center gap-2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>Modifier la recherche</span>
+        </a>
+    </div>
+
+    <!-- Alerte si proposition automatique de date la plus proche -->
+    {% if is_auto_date %}
+    <div class="alert auto-badge p-3 d-flex align-items-center gap-3 mb-4 shadow-sm">
+        <div class="text-primary flex-shrink-0">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="fw-bold mb-1">Date proposée automatiquement au plus proche</h6>
+            <div class="small">
+                Aucune date n'avait été sélectionnée lors de votre recherche. Le système a automatiquement ciblé la date la plus proche disponible : <strong>{{ selected_date_display }}</strong>.
+                Utilisez le carrousel ci-dessous ou le bouton <strong>Suivant</strong> pour explorer les autres jours.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Carrousel / Slider de Dates avec bouton NEXT pour scroller -->
+    <div class="date-nav-wrapper">
+        <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+            <span class="small fw-semibold text-uppercase text-muted" style="letter-spacing: 0.5px;">
+                Choisir une date de voyage
+            </span>
+            <div class="d-flex gap-2">
+                {% if prev_date_str %}
+                <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ prev_date_str }}" 
+                   class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1.5">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span>Jour précédent</span>
+                </a>
+                {% endif %}
+                <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ next_date_str }}" 
+                   class="btn btn-sm btn-primary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5">
+                    <span>Jour suivant</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </a>
+            </div>
+        </div>
+
+        <div class="date-slider-container">
+            <!-- Bouton Scroll Précédent -->
+            <button type="button" class="slider-nav-btn" id="sliderPrevBtn" title="Faire défiler vers la gauche">
+                ‹
+            </button>
+
+            <!-- Liste horizontale des dates scrollable -->
+            <div class="date-slider" id="dateSlider">
+                {% for item in slider_dates %}
+                <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ item.date_str }}" 
+                   class="date-card {% if item.is_selected %}active{% endif %}"
+                   id="{% if item.is_selected %}activeDateCard{% endif %}">
+                    <span class="small fw-semibold {% if item.is_selected %}text-white{% else %}text-muted{% endif %}">
+                        {{ item.day_short }}
+                    </span>
+                    <span class="fs-4 fw-bold my-1">
+                        {{ item.day_num }}
+                    </span>
+                    <span class="small {% if item.is_selected %}text-white-50{% else %}text-secondary{% endif %}">
+                        {{ item.month_short }}
+                    </span>
+
+                    {% if item.is_today %}
+                    <span class="badge bg-warning text-dark mt-1 badge-today" style="font-size: 0.65rem;">
+                        Aujourd'hui
+                    </span>
+                    {% elif item.has_departures %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary mt-1" style="font-size: 0.65rem;">
+                        Disponible
+                    </span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+
+            <!-- Bouton Scroll NEXT / SUIVANT pour faire défiler vers les autres dates -->
+            <button type="button" class="slider-nav-btn" id="sliderNextBtn" title="Faire défiler vers les dates suivantes (Next)">
+                ›
+            </button>
+        </div>
+    </div>
+
+    <!-- Liste des départs -->
+    {% if departures %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="text-muted fw-semibold">
+            {{ departures|length }} départ{{ departures|length|pluralize:"s" }} trouvé{{ departures|length|pluralize:"s" }}
+        </span>
+    </div>
+
+    <div class="row g-4">
+        {% for departure in departures %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden position-relative bg-white">
+                <div class="row g-0 align-items-center">
+                    <!-- Agence Info -->
+                    <div class="col-md-3 bg-light p-4 text-center h-100 d-flex flex-column justify-content-center border-end">
+                        <div class="fw-bold text-dark fs-5 mb-1">{{ departure.agency.name }}</div>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill mx-auto">
+                            {{ departure.vehicle.vehicle_type|default:"Bus Standard" }}
+                        </span>
+                        {% if departure.vehicle.registration %}
+                        <small class="text-muted mt-1" style="font-size: 0.75rem;">{{ departure.vehicle.registration }}</small>
+                        {% endif %}
+                    </div>
+                    <!-- Details trajet -->
+                    <div class="col-md-6 p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="text-center">
+                                <h4 class="fw-bold text-primary mb-0">{{ departure.time|time:"H:i" }}</h4>
+                                <small class="text-muted fw-semibold">{{ departure.segment_start_stop.city.name }}</small>
+                            </div>
+                            <div class="flex-grow-1 mx-4 position-relative">
+                                <hr class="border-secondary border-2 opacity-25">
+                                <div class="position-absolute top-50 start-50 translate-middle bg-white px-2 text-muted small text-nowrap">
+                                    {{ departure.line.name }}
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <h4 class="fw-bold text-primary mb-0">Arrivée</h4>
+                                <small class="text-muted fw-semibold">{{ departure.segment_end_stop.city.name }}</small>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3 justify-content-center text-muted small">
+                            {% if departure.available_capacity > 0 %}
+                            <span class="d-inline-flex align-items-center gap-1.5 text-success fw-semibold">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"></path>
+                                    <path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2Z"></path>
+                                    <path d="M5 18v2"></path>
+                                    <path d="M19 18v2"></path>
+                                </svg>
+                                <span>{{ departure.available_capacity }} place{{ departure.available_capacity|pluralize }} disponible{{ departure.available_capacity|pluralize }}</span>
+                            </span>
+                            {% else %}
+                            <span class="d-inline-flex align-items-center gap-1 text-danger fw-semibold">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                                <span>Complet</span>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Prix et action -->
+                    <div class="col-md-3 p-4 text-center border-start bg-white h-100 d-flex flex-column justify-content-center">
+                        {% if departure.segment_price == 0 %}
+                            <span class="badge bg-info bg-opacity-10 text-info fw-semibold mx-auto mb-2 px-3 py-1">Trajet promotionnel</span>
+                            <h3 class="fw-bold text-dark mb-3">Gratuit</h3>
+                        {% else %}
+                            <h3 class="fw-bold text-dark mb-3">{{ departure.segment_price|format_money }} <span class="fs-6 fw-semibold text-muted">FCFA</span></h3>
+                        {% endif %}
+                        {% if departure.available_capacity > 0 %}
+                        <a href="{% url 'bookings:book' departure.id %}?start={{ departure.segment_start_stop.id }}&end={{ departure.segment_end_stop.id }}" 
+                           class="btn btn-brand w-100 rounded-pill py-2 fw-semibold">
+                            Réserver
+                        </a>
+                        {% else %}
+                        <button class="btn btn-secondary w-100 rounded-pill py-2" disabled>Complet</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Bannière bas de page pour inciter à explorer le jour suivant -->
+    <div class="card border-0 rounded-4 bg-white shadow-sm p-4 text-center mt-5">
+        <h5 class="fw-bold text-dark mb-1">Vous souhaitez voyager un autre jour ?</h5>
+        <p class="text-muted mb-3">Découvrez les départs programmés pour le jour suivant : {{ next_date_display }}.</p>
+        <div>
+            <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ next_date_str }}" 
+               class="btn btn-primary rounded-pill px-4 py-2 fw-semibold d-inline-flex align-items-center gap-2">
+                <span>Voir les départs du {{ next_date_display }}</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Aucun résultat avec icône bus vectorielle et actions proactives -->
+    <div class="text-center py-5 bg-white rounded-4 shadow-sm p-4 p-md-5">
+        <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle bg-primary bg-opacity-10 text-primary" style="width: 80px; height: 80px;">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 6v6"></path>
+                <path d="M15 6v6"></path>
+                <path d="M2 12h19.6"></path>
+                <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.6-.4-1-1-1H2c-.6 0-1 .4-1 1 0 .4.1.8.2 1.2.3 1.1.8 2.8.8 2.8h3"></path>
+                <circle cx="7" cy="18" r="2"></circle>
+                <path d="M9 18h5"></path>
+                <circle cx="16" cy="18" r="2"></circle>
+            </svg>
+        </div>
+        <h3 class="fw-bold text-dark">Aucun départ disponible le {{ selected_date_display }}</h3>
+        <p class="text-muted mx-auto" style="max-width: 550px;">
+            Tous les bus programmés pour cette date sont complets ou déjà partis. Vous pouvez consulter les horaires du jour suivant ou modifier vos critères de voyage.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ next_date_str }}" 
+               class="btn btn-primary rounded-pill px-4 py-2.5 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs">
+                <span>Voir les départs le lendemain ({{ next_date_display }})</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </a>
+            {% if prev_date_str %}
+            <a href="{% url 'travel:search' %}?departure_city={{ selected_departure }}&arrival_city={{ selected_arrival }}&date={{ prev_date_str }}" 
+               class="btn btn-outline-secondary rounded-pill px-3 py-2.5">
+                Consulter la veille
+            </a>
+            {% endif %}
+            <a href="{% url 'travel:home' %}" class="btn btn-light border rounded-pill px-4 py-2.5 fw-medium">
+                Modifier la recherche
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Script pour le défilement (scroll) avec le bouton Next et Prev -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const slider = document.getElementById('dateSlider');
+        const nextBtn = document.getElementById('sliderNextBtn');
+        const prevBtn = document.getElementById('sliderPrevBtn');
+        const activeCard = document.getElementById('activeDateCard');
+
+        if (slider) {
+            // Bouton Next : fait défiler vers la droite pour afficher les dates suivantes
+            if (nextBtn) {
+                nextBtn.addEventListener('click', function() {
+                    slider.scrollBy({ left: 240, behavior: 'smooth' });
+                });
+            }
+
+            // Bouton Prev : fait défiler vers la gauche
+            if (prevBtn) {
+                prevBtn.addEventListener('click', function() {
+                    slider.scrollBy({ left: -240, behavior: 'smooth' });
+                });
+            }
+
+            // Centrer automatiquement la date active si elle est visible
+            if (activeCard) {
+                const cardLeft = activeCard.offsetLeft;
+                const cardWidth = activeCard.offsetWidth;
+                const sliderWidth = slider.offsetWidth;
+                slider.scrollTo({
+                    left: cardLeft - (sliderWidth / 2) + (cardWidth / 2),
+                    behavior: 'smooth'
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

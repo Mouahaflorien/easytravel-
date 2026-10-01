@@ -1,0 +1,395 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+{% block title %}Gestion des Réservations & Embarquement - Portail Agence{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark">Réservations & Contrôle d'Embarquement</h3>
+        <p class="text-muted small mb-0">Vérification des pièces d'identité (CNI / Passeport), encaissements et bordereaux</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'agencies:booking_create' %}" class="btn btn-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs text-white">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="12" y1="12" x2="12" y2="12"></line>
+            </svg>
+            <span>+ Vente Guichet</span>
+        </a>
+        {% if selected_departure %}
+        <a href="{% url 'agencies:departure_manifest' selected_departure %}" class="btn btn-dark rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs" target="_blank">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            <span>Liste des passagers</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cartes Statistiques Réservations avec Distinction Ventes vs Encaissements -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="stat-title text-muted small">Volume des Ventes</div>
+            <div class="stat-value text-dark my-1">{{ total_sales|format_money }} <span class="fs-6 fw-normal text-muted">FCFA</span></div>
+            <div class="small text-muted">{{ total_bookings_count }} réservation(s) validée(s)</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="stat-title text-success fw-semibold small">Recettes Encaissées</div>
+            <div class="stat-value text-success my-1">
+                {{ total_revenue|format_money }} <span class="fs-6 fw-normal text-muted">FCFA</span>
+            </div>
+            <div class="small text-muted">{{ paid_count }} réservation(s) réglée(s)</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="stat-title {% if pending_revenue > 0 %}text-warning-emphasis fw-semibold{% else %}text-muted{% endif %} small">
+                À Encaisser (Guichet)
+            </div>
+            <div class="stat-value {% if pending_revenue > 0 %}text-warning-emphasis{% else %}text-muted{% endif %} my-1">
+                {{ pending_revenue|format_money }} <span class="fs-6 fw-normal text-muted">FCFA</span>
+            </div>
+            <div class="small text-muted">{{ pending_payment_count }} en attente de paiement</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card p-3">
+            <div class="stat-title text-muted small">Passagers Embarqués</div>
+            <div class="stat-value text-primary my-1">
+                {{ boarded_count }}
+            </div>
+            <div class="small text-muted">Sur {{ confirmed_count|add:boarded_count }} passager(s) attendu(s)</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres et Recherche -->
+<div class="card border-0 shadow-sm rounded-3 p-3 mb-4 bg-white">
+    <form method="get" class="row g-2 align-items-center">
+        <!-- Recherche textuelle -->
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </span>
+                <input type="text" name="q" class="form-control bg-light border-start-0" 
+                       placeholder="Nom, Tél, CNI, Réf..." value="{{ q }}">
+            </div>
+        </div>
+
+        <!-- Filtre par statut réservation -->
+        <div class="col-md-2">
+            <select name="status" class="form-select bg-light">
+                <option value="">Tous les statuts voyage</option>
+                <option value="confirmed" {% if current_status == 'confirmed' %}selected{% endif %}>Confirmée</option>
+                <option value="boarded" {% if current_status == 'boarded' %}selected{% endif %}>Embarqué(e)</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Annulée</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>En attente</option>
+            </select>
+        </div>
+
+        <!-- Filtre par statut paiement -->
+        <div class="col-md-2">
+            <select name="payment_status" class="form-select bg-light">
+                <option value="">Tous les règlements</option>
+                <option value="paid" {% if current_payment_status == 'paid' %}selected{% endif %}>Encaissé</option>
+                <option value="pending" {% if current_payment_status == 'pending' %}selected{% endif %}>À encaisser</option>
+                <option value="refunded" {% if current_payment_status == 'refunded' %}selected{% endif %}>Remboursé</option>
+            </select>
+        </div>
+
+        <!-- Filtre par départ -->
+        <div class="col-md-3">
+            <select name="departure" class="form-select bg-light">
+                <option value="">Tous les départs récents</option>
+                {% for dep in recent_departures %}
+                <option value="{{ dep.id }}" {% if selected_departure == dep.id|stringformat:"s" %}selected{% endif %}>
+                    {{ dep.date|date:"d/m" }} {{ dep.time|time:"H:i" }} - {{ dep.line.name }} ({{ dep.vehicle.registration|default:"Bus" }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Boutons filtrer / reset -->
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-primary w-100 fw-semibold">Filtrer</button>
+            {% if q or current_status or current_payment_status or selected_departure %}
+            <a href="{% url 'agencies:booking_list' %}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center" title="Réinitialiser">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Tableau des Réservations -->
+<div class="card table-card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">Réf. Billet</th>
+                    <th>Passager & Contact</th>
+                    <th>Contrôle Pièce d'Identité</th>
+                    <th>Trajet & Départ</th>
+                    <th class="text-center">Places</th>
+                    <th>Montant & Encaissement</th>
+                    <th class="text-center">Statut Réservation</th>
+                    <th class="text-end pe-4">Actions Agent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr>
+                    <!-- Réf. Billet -->
+                    <td class="ps-4">
+                        <a href="{% url 'bookings:confirmation' booking.reference %}" target="_blank" class="fw-bold text-decoration-none text-primary font-monospace" style="letter-spacing: 0.3px;" title="Voir le e-billet">
+                            {{ booking.reference }}
+                        </a>
+                        <div class="text-muted small" style="font-size: 0.72rem;">{{ booking.created_at|date:"d/m/Y H:i" }}</div>
+                    </td>
+
+                    <!-- Passager & Contact : Formatage uniforme & indicatif dynamique -->
+                    <td>
+                        <div class="fw-bold text-dark">{{ booking.traveler_name }}</div>
+                        <div class="mt-1">
+                            {{ booking.traveler_phone|format_phone }}
+                        </div>
+                        {% if booking.traveler_email %}
+                        <div class="text-muted small mt-0.5" style="font-size: 0.76rem;">{{ booking.traveler_email }}</div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Contrôle Pièce d'Identité (Correction id_type & id_number) -->
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if booking.id_type == 'CNI' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-2 py-1">
+                                    CNI
+                                </span>
+                            {% elif booking.id_type == 'PASSPORT' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                                    Passeport
+                                </span>
+                            {% elif booking.id_type == 'RECEIPT' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning border-opacity-25 px-2 py-1">
+                                    Récépissé
+                                </span>
+                            {% else %}
+                                <span class="badge bg-light text-secondary border px-2 py-1">
+                                    {{ booking.get_id_type_display|default:"Non renseignée" }}
+                                </span>
+                            {% endif %}
+                            
+                            {% if booking.id_number %}
+                            <strong class="text-dark font-monospace" style="font-size: 0.85rem;">
+                                {{ booking.id_number }}
+                            </strong>
+                            {% else %}
+                            <span class="text-muted fw-bold">-</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Trajet & Départ : Remplacement des '->' par icône vectorielle insécable -->
+                    <td>
+                        <div>
+                            {{ booking.departure.line.name|format_route }}
+                        </div>
+                        <div class="text-muted small mt-0.5">
+                            {{ booking.departure.date|date:"d/m/Y" }} à {{ booking.departure.time|time:"H:i" }}
+                        </div>
+                        {% if booking.departure_stop and booking.arrival_stop %}
+                        <div class="text-secondary d-inline-flex align-items-center gap-1.5 text-nowrap mt-0.5" style="font-size: 0.78rem;">
+                            <span>{{ booking.departure_stop.name }}</span>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted flex-shrink-0">
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                                <polyline points="12 5 19 12 12 19"></polyline>
+                            </svg>
+                            <span>{{ booking.arrival_stop.name }}</span>
+                        </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Places : Affichage propre sans carrés vides (utilise seats_reserved) -->
+                    <td class="text-center">
+                        {% if booking.seats_reserved %}
+                            <span class="badge bg-light border text-dark fw-bold px-2.5 py-1" style="font-size: 0.82rem;">
+                                {{ booking.seats_reserved }}
+                            </span>
+                        {% else %}
+                            <span class="text-muted fw-bold">-</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Montant financier & Statut Encaissement -->
+                    <td>
+                        <strong class="text-dark fw-bold text-nowrap fs-6">{{ booking.total_amount|format_money }} FCFA</strong>
+                        <div class="mt-1">
+                            {% if booking.payment_status == 'paid' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;" title="Encaissé via {{ booking.get_payment_method_display|default:'Guichet' }}">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Encaissé ({{ booking.get_payment_method_display|default:'Espèces' }})</span>
+                                </span>
+                            {% elif booking.payment_status == 'pending' %}
+                                <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    <span>À encaisser</span>
+                                </span>
+                            {% elif booking.payment_status == 'refunded' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.73rem;">
+                                    Remboursé
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.73rem;">
+                                    {{ booking.get_payment_status_display }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Statut Réservation -->
+                    <td class="text-center">
+                        {% if booking.status == 'boarded' %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <span>Embarqué(e)</span>
+                            </span>
+                        {% elif booking.status == 'confirmed' %}
+                            <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                <span>Confirmée</span>
+                            </span>
+                        {% elif booking.status == 'pending' %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning-emphasis rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>En attente</span>
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                                <span>Annulée</span>
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions Agent -->
+                    <td class="text-end pe-4">
+                        <div class="d-inline-flex align-items-center gap-1.5">
+                            <!-- Si paiement en attente, bouton pour encaisser au guichet -->
+                            {% if booking.payment_status == 'pending' %}
+                            <form action="{% url 'agencies:update_booking_status' booking.id %}" method="post" class="d-inline m-0">
+                                {% csrf_token %}
+                                <input type="hidden" name="payment_status" value="paid">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-xs" title="Encaisser le règlement au guichet">
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    <span>Encaisser</span>
+                                </button>
+                            </form>
+                            {% endif %}
+                            <!-- Si confirmée, bouton pour marquer comme embarqué (check-in) -->
+                            {% if booking.status == 'confirmed' %}
+                            <form action="{% url 'agencies:update_booking_status' booking.id %}" method="post" class="d-inline m-0">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="boarded">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs" title="Valider CNI & Embarquement">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    <span>Embarquer</span>
+                                </button>
+                            </form>
+                            {% endif %}
+
+                            <!-- Voir Billet officiel (Action principale) -->
+                            <a href="{% url 'bookings:confirmation' booking.reference %}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs" title="Voir / Imprimer le E-Billet">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+                                </svg>
+                                <span>Billet</span>
+                            </a>
+
+                            <!-- Annuler : Bouton adouci discret (évite le gros X rouge agressif) -->
+                            {% if booking.status != 'cancelled' %}
+                            <form action="{% url 'agencies:update_booking_status' booking.id %}" method="post" class="d-inline m-0" onsubmit="return confirm('Confirmer l\'annulation de cette réservation ?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="cancelled">
+                                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                <button type="submit" class="btn-action-icon btn-action-delete" title="Annuler la réservation" style="width: 31px; height: 31px; padding: 0;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center py-5 text-muted">
+                        <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-light mb-3">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <h5 class="fw-bold text-dark">Aucune réservation trouvée</h5>
+                        <p class="small text-muted mb-0">Essayez de modifier vos filtres de recherche.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <small class="text-muted">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</small>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_payment_status %}&payment_status={{ current_payment_status }}{% endif %}{% if selected_departure %}&departure={{ selected_departure }}{% endif %}">Précédent</a>
+            </li>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if current_payment_status %}&payment_status={{ current_payment_status }}{% endif %}{% if selected_departure %}&departure={{ selected_departure }}{% endif %}">Suivant</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

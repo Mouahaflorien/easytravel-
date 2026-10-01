@@ -1,0 +1,348 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+{% block title %}Gestion des Départs - Mon Agence{% endblock %}
+
+{% block content %}
+<!-- En-tête avec Titre et Action Rapide de Programmation -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2">
+            <h3 class="fw-bold mb-0 text-dark">Planning des Départs</h3>
+            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 fw-semibold small">
+                Tri chronologique
+            </span>
+        </div>
+        <p class="text-muted small mb-0 mt-1">Surveillance des créneaux, capacité en temps réel, affectation des chauffeurs et passagers</p>
+    </div>
+    
+    <a href="{% url 'agencies:departure_create' %}" class="btn btn-primary fw-semibold rounded-pill px-4 d-inline-flex align-items-center gap-2 shadow-xs text-white">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        <span>Programmer un départ</span>
+    </a>
+</div>
+
+<!-- Filtres Rapides Chronologiques & Recherche -->
+<div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+    <!-- Onglets de filtrage temporel chronologique -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-3 border-bottom gap-2">
+        <div class="btn-group p-1 bg-light rounded-pill border" role="group">
+            <a href="?time_filter=upcoming{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}" 
+               class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if time_filter == 'upcoming' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
+                À venir (Chronologique) <span class="badge bg-white text-dark rounded-pill ms-1 small">{{ count_upcoming|default:"0" }}</span>
+            </a>
+            <a href="?time_filter=today{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}" 
+               class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if time_filter == 'today' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
+                Aujourd'hui <span class="badge bg-white text-dark rounded-pill ms-1 small">{{ count_today|default:"0" }}</span>
+            </a>
+            <a href="?time_filter=all{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}" 
+               class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if time_filter == 'all' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
+                Tous les départs <span class="badge bg-white text-dark rounded-pill ms-1 small">{{ count_all|default:"0" }}</span>
+            </a>
+            <a href="?time_filter=past{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}" 
+               class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if time_filter == 'past' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
+                Historique / Passés <span class="badge bg-white text-dark rounded-pill ms-1 small">{{ count_past|default:"0" }}</span>
+            </a>
+        </div>
+
+        <div class="text-muted small">
+            <span>Date de référence : <strong>{{ today|date:"l d F Y" }}</strong></span>
+        </div>
+    </div>
+
+    <!-- Formulaire de recherche et filtres fins -->
+    <form method="get" class="row g-2 align-items-center">
+        <input type="hidden" name="time_filter" value="{{ time_filter }}">
+        
+        <!-- Recherche textuelle (Ligne, Bus, Chauffeur) -->
+        <div class="col-md-4">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </span>
+                <input type="text" name="q" class="form-control bg-light border-start-0" 
+                       placeholder="Ligne, Bus, Chauffeur..." value="{{ q }}">
+            </div>
+        </div>
+
+        <!-- Filtre par statut -->
+        <div class="col-md-3">
+            <select name="status" class="form-select bg-light">
+                <option value="">Tous les statuts</option>
+                <option value="scheduled" {% if current_status == 'scheduled' %}selected{% endif %}>Programmé</option>
+                <option value="boarding" {% if current_status == 'boarding' %}selected{% endif %}>Embarquement</option>
+                <option value="departed" {% if current_status == 'departed' %}selected{% endif %}>Parti</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>Annulé</option>
+            </select>
+        </div>
+
+        <!-- Filtre par date exacte -->
+        <div class="col-md-3">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0 text-muted">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                </span>
+                <input type="text" id="filter-departure-date" name="date" class="form-control bg-light border-start-0" 
+                       placeholder="JJ/MM/AAAA" value="{{ selected_date }}">
+            </div>
+        </div>
+
+        <!-- Boutons d'action -->
+        <div class="col-md-2 d-flex gap-1">
+            <button type="submit" class="btn btn-primary w-100 fw-semibold">Filtrer</button>
+            {% if q or current_status or selected_date %}
+            <a href="?time_filter={{ time_filter }}" class="btn btn-outline-secondary d-flex align-items-center justify-content-center" title="Réinitialiser">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Tableau Opérationnel des Départs Organisé par Priorités -->
+<div class="card table-card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4" style="min-width: 140px;">Date & Heure</th>
+                    <th style="min-width: 180px;">Trajet / Ligne</th>
+                    <th style="min-width: 180px;">Places Libres & Capacité</th>
+                    <th style="min-width: 150px;">Véhicule Assigné</th>
+                    <th style="min-width: 160px;">Chauffeur</th>
+                    <th class="text-center" style="min-width: 110px;">Statut</th>
+                    <th class="text-end pe-4" style="min-width: 220px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dep in departures %}
+                <tr class="{% if dep.status == 'cancelled' %}opacity-50 bg-light{% endif %}">
+                    
+                    <!-- 1. Priorité 1 : Date & Heure (Tri chronologique) -->
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center gap-1.5 text-dark fw-bold">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary flex-shrink-0">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span class="fs-6 text-primary">{{ dep.time|time:"H:i" }}</span>
+                            {% if dep.date == today %}
+                                <span class="badge bg-danger rounded-pill px-2 py-0.5 fw-bold" style="font-size: 0.68rem;">Aujourd'hui</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small mt-0.5" style="font-size: 0.78rem;">
+                            {{ dep.date|date:"d/m/Y" }}
+                        </div>
+                    </td>
+
+                    <!-- 2. Trajet / Ligne -->
+                    <td>
+                        <strong class="text-dark fs-6 d-block">{{ dep.line.name }}</strong>
+                        <small class="text-muted" style="font-size: 0.74rem;">
+                            Durée est. ~{{ dep.line.get_duration }} • Arrivée ~{{ dep.get_trip_end_datetime|date:"H:i" }}
+                        </small>
+                    </td>
+
+                    <!-- 3. Priorité 2 : Places libres & Capacité (Jauge visuelle) -->
+                    <td>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                <span class="fw-bold {% if dep.available_capacity == 0 %}text-danger{% elif dep.available_capacity <= 5 %}text-warning-emphasis{% else %}text-success{% endif %}">
+                                    {{ dep.available_capacity }} libres
+                                </span>
+                                <span class="text-muted small">/ {{ dep.total_capacity }} pl.</span>
+                            </div>
+                            <span class="badge {% if dep.booked_seats > 0 %}bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25{% else %}bg-light text-muted border{% endif %} rounded-pill px-2 py-0.5 fw-semibold" style="font-size: 0.72rem;">
+                                {{ dep.booked_seats }} réservée(s)
+                            </span>
+                        </div>
+                        <!-- Mini Jauge de Remplissage -->
+                        <div class="progress" style="height: 6px; background-color: #e2e8f0; border-radius: 3px;">
+                            <div class="progress-bar {% if dep.available_capacity == 0 %}bg-danger{% elif dep.occupancy_rate > 75 %}bg-warning{% else %}bg-primary{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ dep.occupancy_rate }}%;" 
+                                 aria-valuenow="{{ dep.occupancy_rate }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- 4. Véhicule assigné -->
+                    <td>
+                        <div class="fw-medium text-dark">{{ dep.vehicle.vehicle_type|default:"Bus Standard" }}</div>
+                        {% if dep.vehicle.registration %}
+                        <span class="badge border font-monospace text-secondary" style="font-size: 0.72rem; background-color: #f8fafc;">
+                            {{ dep.vehicle.registration }}
+                        </span>
+                        {% else %}
+                        <span class="text-muted small">-</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- 5. Priorité 3 : Chauffeur -->
+                    <td>
+                        {% if dep.driver %}
+                            <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ dep.driver.full_name }}</div>
+                            <div class="text-muted small mt-0.5" style="font-size: 0.74rem;">{{ dep.driver.phone|format_phone }}</div>
+                        {% else %}
+                            <span class="badge bg-light text-muted border px-2 py-1 rounded-pill" style="font-size: 0.73rem;">
+                                Non assigné
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- 6. Statut du départ -->
+                    <td class="text-center">
+                        {% if dep.status == 'scheduled' %}
+                            <span class="badge badge-status-scheduled rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                Programmé
+                            </span>
+                        {% elif dep.status == 'boarding' %}
+                            <span class="badge badge-status-boarding rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                Embarquement
+                            </span>
+                        {% elif dep.status == 'departed' %}
+                            <span class="badge badge-status-departed rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                Parti
+                            </span>
+                        {% else %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
+                                Annulé
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- 7. Actions (Liste des passagers, Modifier, Annuler/Supprimer intelligent) -->
+                    <td class="text-end pe-4">
+                        <div class="d-inline-flex align-items-center gap-1.5">
+                            
+                            <!-- Action principale : "Liste des passagers" (remplace "Manifeste") -->
+                            <a href="{% url 'agencies:departure_manifest' dep.pk %}" 
+                               class="btn btn-sm btn-dark rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1.5 shadow-xs" 
+                               title="Consulter les passagers, suivre l'embarquement et imprimer la feuille de route">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                <span class="fw-semibold">Liste des passagers</span>
+                                {% if dep.passenger_count > 0 %}
+                                    <span class="badge bg-light text-dark rounded-pill px-1.5" style="font-size: 0.7rem;">{{ dep.passenger_count }}</span>
+                                {% endif %}
+                            </a>
+                            
+                            <!-- Action Modifier (Crayon discret) -->
+                            {% if dep.status != 'cancelled' %}
+                            <a href="{% url 'agencies:departure_update' dep.pk %}" class="btn-action-icon" title="Modifier la programmation">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </a>
+                            {% endif %}
+
+                            <!-- Distinction Annulation vs Suppression -->
+                            {% if dep.status != 'cancelled' %}
+                                {% if dep.has_active_bookings %}
+                                    <!-- Annuler le départ (Passagers présents : conserve l'historique) -->
+                                    <a href="{% url 'agencies:departure_cancel' dep.pk %}" 
+                                       class="btn-action-icon text-warning-emphasis bg-warning bg-opacity-10 border-warning border-opacity-25" 
+                                       title="Annuler ce départ officiel ({{ dep.passenger_count }} passager(s) réservé(s))">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                        </svg>
+                                    </a>
+                                {% else %}
+                                    <!-- Supprimer (Départ vide sans passager) -->
+                                    <a href="{% url 'agencies:departure_delete' dep.pk %}" 
+                                       class="btn-action-icon btn-action-delete" 
+                                       title="Supprimer ce départ vide">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-light mb-3">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </div>
+                        <h5 class="fw-bold text-dark">Aucun départ trouvé</h5>
+                        <p class="small text-muted mb-3">Aucun voyage ne correspond à vos filtres chronologiques.</p>
+                        <a href="{% url 'agencies:departure_create' %}" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
+                            + Programmer un départ
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center">
+        <small class="text-muted">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</small>
+        <ul class="pagination pagination-sm mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&time_filter={{ time_filter }}{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if selected_date %}&date={{ selected_date }}{% endif %}">Précédent</a>
+            </li>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&time_filter={{ time_filter }}{% if q %}&q={{ q }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if selected_date %}&date={{ selected_date }}{% endif %}">Suivant</a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (typeof flatpickr !== "undefined") {
+            flatpickr("#filter-departure-date", {
+                locale: "fr",
+                altInput: true,
+                altFormat: "d/m/Y",
+                dateFormat: "Y-m-d",
+                allowInput: true,
+                altInputClass: "form-control bg-light border-start-0",
+                placeholder: "JJ/MM/AAAA"
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,55 @@
+Matricule Bus,Type Bus,Capacité,Nom de la Ligne,Arrêts,Heure Depart,Date Depart
+LT-1001,MiniBus 20,20,Centre - Littoral,Yaoundé-Edea-Douala,06:30,2026-10-15
+LT-1002,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,12:30,2026-10-17
+LT-1003,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,10:30,2026-10-15
+LT-1004,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,10:30,2026-10-15
+LT-1005,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,13:00,2026-10-15
+LT-1006,MiniBus 20,20,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,07:30,2026-10-17
+LT-1007,Classique,70,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,16:30,2026-10-16
+LT-1008,Classique,70,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,13:00,2026-10-15
+LT-1009,Premium 30,30,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,17:00,2026-10-15
+LT-1010,Premium 30,30,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,17:30,2026-10-15
+LT-1011,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,15:30,2026-10-17
+LT-1012,VIP 50,50,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,19:00,2026-10-16
+LT-1013,VIP 50,50,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,07:00,2026-10-16
+LT-1014,MiniBus 20,20,Littoral - Sud Ouest,Douala-Buea-Limbe,08:30,2026-10-17
+LT-1015,Premium 30,30,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,06:30,2026-10-15
+LT-1016,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,13:30,2026-10-15
+LT-1017,Classique,70,Centre - Littoral,Yaoundé-Edea-Douala,18:30,2026-10-16
+LT-1018,VIP 50,50,Centre - Littoral,Yaoundé-Edea-Douala,20:00,2026-10-16
+LT-1019,Classique,70,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,17:00,2026-10-17
+LT-1020,Classique,70,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,08:00,2026-10-16
+LT-1021,VIP 50,50,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,11:30,2026-10-15
+LT-1022,Classique,70,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,16:00,2026-10-15
+LT-1023,VIP 50,50,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,10:30,2026-10-17
+LT-1024,MiniBus 20,20,Centre - Littoral,Yaoundé-Edea-Douala,06:00,2026-10-15
+LT-1025,VIP 50,50,Centre - Littoral,Yaoundé-Edea-Douala,15:00,2026-10-16
+LT-1026,MiniBus 20,20,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,07:00,2026-10-15
+LT-1027,Premium 30,30,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,07:30,2026-10-16
+LT-1028,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,11:00,2026-10-16
+LT-1029,MiniBus 20,20,Centre - Littoral,Yaoundé-Edea-Douala,19:00,2026-10-15
+LT-1030,MiniBus 20,20,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,16:00,2026-10-15
+LT-1031,Classique,70,Centre - Littoral,Yaoundé-Edea-Douala,08:00,2026-10-17
+LT-1032,Classique,70,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,09:30,2026-10-17
+LT-1033,MiniBus 20,20,Littoral - Sud Ouest,Douala-Buea-Limbe,20:00,2026-10-17
+LT-1034,Classique,70,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,07:30,2026-10-17
+LT-1035,VIP 50,50,Centre - Littoral,Yaoundé-Edea-Douala,09:30,2026-10-16
+LT-1036,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,14:00,2026-10-15
+LT-1037,Classique,70,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,14:00,2026-10-17
+LT-1038,VIP 50,50,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,18:30,2026-10-16
+LT-1039,Premium 30,30,Littoral - Sud Ouest,Douala-Buea-Limbe,08:00,2026-10-15
+LT-1040,Premium 30,30,Littoral - Sud Ouest,Douala-Buea-Limbe,19:00,2026-10-17
+LT-1041,Classique,70,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,13:00,2026-10-16
+LT-1042,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,09:00,2026-10-15
+LT-1043,Premium 30,30,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,20:30,2026-10-15
+LT-1044,Classique,70,Littoral - Sud Ouest,Douala-Buea-Limbe,15:00,2026-10-16
+LT-1045,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,12:00,2026-10-17
+LT-1046,Classique,70,Centre - Littoral,Yaoundé-Edea-Douala,07:30,2026-10-17
+LT-1047,Classique,70,Centre - Littoral,Yaoundé-Edea-Douala,18:30,2026-10-17
+LT-1048,MiniBus 20,20,Ouest - Littoral,Douala-Bafang-Bafoussam-Dschang,07:00,2026-10-15
+LT-1049,Classique,70,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,16:30,2026-10-16
+LT-1050,Premium 30,30,Centre - Littoral,Yaoundé-Edea-Douala,09:30,2026-10-15
+LT-1051,VIP 50,50,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,17:30,2026-10-16
+LT-1052,VIP 50,50,Sud - Centre,Ebolowa-Mbalmayo-Yaoundé,15:30,2026-10-16
+LT-1053,VIP 50,50,Littoral - Sud Ouest,Douala-Buea-Limbe,07:30,2026-10-15
+LT-1054,Classique,70,Nord - Centre,Garoua-Ngaoundéré-Yaoundé,19:00,2026-10-16

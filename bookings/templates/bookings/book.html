@@ -1,0 +1,494 @@
+{% extends 'travel/base.html' %}
+{% load agency_extras %}
+
+{% block title %}Réserver votre billet : {{ start_stop.city.name }} ➔ {{ end_stop.city.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Fil d'ariane -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'travel:home' %}" class="text-decoration-none">Accueil</a></li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'travel:search' %}?departure_city={{ start_stop.city.id }}&arrival_city={{ end_stop.city.id }}&date={{ departure.date|date:'Y-m-d' }}" class="text-decoration-none">
+                    Recherche
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Finalisation du Billet</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne Gauche : Formulaire Voyageur -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white p-4 p-md-5">
+                <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+                    <div>
+                        <h3 class="fw-bold text-dark mb-1">Informations du Passager</h3>
+                        <p class="text-muted small mb-0">Renseignez les données conformes à votre pièce d'identité</p>
+                    </div>
+                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 small fw-semibold d-inline-flex align-items-center gap-1.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        <span>Données Sécurisées</span>
+                    </span>
+                </div>
+
+                {% if error %}
+                <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+                    <div class="text-danger flex-shrink-0">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <strong>Erreur de validation :</strong>
+                        <div class="small">{{ error }}</div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" id="bookingForm" novalidate>
+                    {% csrf_token %}
+                    <input type="hidden" name="start_id" value="{{ start_stop.id }}">
+                    <input type="hidden" name="end_id" value="{{ end_stop.id }}">
+
+                    <!-- 1. Identité Civile -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-dark mb-1" for="nameInput">
+                            Nom et Prénom du Voyageur <span class="text-danger">*</span>
+                        </label>
+                        <div class="position-relative">
+                            <input type="text" name="name" id="nameInput" class="form-control py-2.5 rounded-3" 
+                                   placeholder="ex: Kamgaing Jean-Paul" 
+                                   value="{{ form_data.name }}" required>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small class="text-muted" style="font-size: 0.75rem;">Exactement tel qu'écrit sur votre pièce d'identité.</small>
+                            <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="nameValidHint">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <span>Nom renseigné</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 2. Pièce d'Identité Officielle (Réglementation transport) -->
+                    <div class="mb-4 p-3 bg-light rounded-3 border">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="fw-bold small text-dark d-flex align-items-center gap-1.5">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                                    <circle cx="9" cy="10" r="2"></circle>
+                                    <line x1="15" y1="8" x2="17" y2="8"></line>
+                                    <line x1="15" y1="12" x2="17" y2="12"></line>
+                                </svg>
+                                <span>Pièce d'Identité <span class="text-danger">*</span></span>
+                            </span>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.7rem;">
+                                Contrôle obligatoire
+                            </span>
+                        </div>
+                        
+                        <div class="row g-2">
+                            <div class="col-sm-5">
+                                <label class="form-label small text-muted mb-1">Type de document</label>
+                                <select name="id_type" id="idTypeSelect" class="form-select py-2 rounded-3 bg-white" required>
+                                    <option value="CNI" {% if form_data.id_type == 'CNI' %}selected{% endif %}>Carte d'Identité (CNI)</option>
+                                    <option value="PASSPORT" {% if form_data.id_type == 'PASSPORT' %}selected{% endif %}>Passeport</option>
+                                    <option value="RECEIPT" {% if form_data.id_type == 'RECEIPT' %}selected{% endif %}>Récépissé de CNI</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-7">
+                                <label class="form-label small text-muted mb-1" for="idNumberInput">Numéro de la pièce</label>
+                                <input type="text" name="id_number" id="idNumberInput" class="form-control py-2 rounded-3 bg-white" 
+                                       placeholder="ex: 102938475" 
+                                       value="{{ form_data.id_number }}" required>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted" style="font-size: 0.74rem;">La pièce originale sera contrôlée avant la montée dans le bus.</small>
+                            <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="idValidHint">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <span>Numéro valide</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 3. Coordonnées de Contact (Téléphone & Email alignés) -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-dark mb-1" for="phoneInput">
+                                Téléphone Mobile <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <select id="phoneCountrySelect" class="form-select bg-light fw-medium border-end-0" style="max-width: 125px; font-size: 0.85rem;">
+                                    <option value="+237" selected>CM +237</option>
+                                    <option value="+49">DE +49</option>
+                                    <option value="+33">FR +33</option>
+                                    <option value="+32">BE +32</option>
+                                    <option value="+1">US +1</option>
+                                    <option value="+44">UK +44</option>
+                                    <option value="+">Autre</option>
+                                </select>
+                                <input type="tel" name="phone" id="phoneInput" class="form-control py-2" 
+                                       placeholder="6XX XXX XXX" 
+                                       value="{{ form_data.phone }}" required>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted" style="font-size: 0.74rem;">SMS de confirmation envoyé ici.</small>
+                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="phoneValidHint">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Numéro valide</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label class="form-label fw-bold small text-dark mb-1" for="emailInput">
+                                Adresse Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" name="email" id="emailInput" class="form-control py-2 rounded-3" 
+                                   placeholder="exemple@domaine.com" 
+                                   value="{{ form_data.email }}" required>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted" style="font-size: 0.74rem;">Votre e-billet PDF y sera délivré.</small>
+                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="emailValidHint">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <span>Email valide</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Nombre de places -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-dark mb-1" for="seatsInput">
+                            Nombre de places à réserver <span class="text-danger">*</span>
+                        </label>
+                        <div class="row align-items-center g-2">
+                            <div class="col-sm-4">
+                                <input type="number" name="seats" id="seatsInput" class="form-control py-2 rounded-3" 
+                                       value="{{ form_data.seats|default:1 }}" min="1" max="{{ departure.available_capacity }}" required>
+                            </div>
+                            <div class="col-sm-8 text-muted small">
+                                Maximum : <strong class="text-success">{{ departure.available_capacity }}</strong> place(s) disponible(s) dans ce bus.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. Case à cocher simplifiée avec lien vers la modale des Conditions Générales -->
+                    <div class="form-check p-3 bg-light rounded-3 border mb-4">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="acceptLegalTerms" required checked>
+                        <label class="form-check-label small text-muted" for="acceptLegalTerms">
+                            J'accepte les <a href="#" class="text-primary fw-semibold text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalCGV">Conditions Générales de Transport</a> et certifie l'exactitude des informations d'identité fournies.
+                        </label>
+                    </div>
+
+                    <!-- Bouton soumission -->
+                    <button type="submit" id="submitBookingBtn" class="btn btn-brand w-100 py-3 rounded-pill fw-bold fs-5 shadow d-flex align-items-center justify-content-center gap-2">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                            <circle cx="12" cy="12" r="2"></circle>
+                            <path d="M6 12h.01M18 12h.01"></path>
+                        </svg>
+                        <span>Émettre mon Billet Électronique</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Colonne Droite : Récapitulatif Billet -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white sticky-top" style="top: 96px;">
+                <div class="card-header bg-dark text-white p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="badge bg-primary rounded-pill px-3 py-1">Récapitulatif</span>
+                        <small class="text-secondary">{{ departure.agency.name }}</small>
+                    </div>
+                    <h4 class="fw-bold mb-0 text-white d-flex align-items-center gap-2">
+                        <span>{{ start_stop.city.name }}</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-warning flex-shrink-0">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                        <span>{{ end_stop.city.name }}</span>
+                    </h4>
+                </div>
+
+                <div class="card-body p-4">
+                    <ul class="list-unstyled mb-4">
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span>Date du voyage</span>
+                            </span>
+                            <strong class="text-dark">{{ departure.date|date:"l d F Y" }}</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>Heure de départ</span>
+                            </span>
+                            <strong class="text-primary fs-5">{{ departure.time|time:"H:i" }}</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <rect x="3" y="4" width="18" height="15" rx="2"></rect>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                    <circle cx="7" cy="15" r="1.5"></circle>
+                                    <circle cx="17" cy="15" r="1.5"></circle>
+                                </svg>
+                                <span>Agence & Véhicule</span>
+                            </span>
+                            <span class="text-end text-dark">
+                                <strong>{{ departure.agency.name }}</strong><br>
+                                <small class="text-muted">{{ departure.vehicle.vehicle_type|default:"Bus Standard" }}</small>
+                            </span>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                                    <circle cx="12" cy="10" r="3"></circle>
+                                </svg>
+                                <span>Arrêt de montée</span>
+                            </span>
+                            <strong class="text-dark">{{ start_stop.city.name }}</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted d-inline-flex align-items-center gap-1.5">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                                <span>Arrêt de descente</span>
+                            </span>
+                            <strong class="text-dark">{{ end_stop.city.name }}</strong>
+                        </li>
+                        <li class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted">Tarif par place</span>
+                            <strong class="text-dark">{{ segment_price|format_money }} FCFA</strong>
+                        </li>
+                    </ul>
+
+                    <!-- Montant Total en grand -->
+                    <div class="bg-light rounded-3 p-3 text-center mb-3">
+                        <div class="text-muted small text-uppercase fw-semibold">Montant Total à régler</div>
+                        <div class="display-6 fw-bold text-dark my-1">
+                            <span id="totalDisplay">{{ segment_price|format_money }}</span> FCFA
+                        </div>
+                        <small class="text-muted">Taxes et frais de réservation inclus</small>
+                    </div>
+
+                    <!-- Avantages et réassurance -->
+                    <div class="d-flex flex-column gap-2 small text-muted">
+                        <div class="d-flex align-items-center gap-2">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-success flex-shrink-0">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Billet électronique instantané avec QR Code</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-success flex-shrink-0">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Confirmation immédiate de la place garantie</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-success flex-shrink-0">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Assistance voyageur 7j/7</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script calcul dynamique du montant total & masque de téléphone -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 1. Calcul du montant total
+        const unitPrice = parseFloat("{{ segment_price }}");
+        const seatsInput = document.getElementById('seatsInput');
+        const totalDisplay = document.getElementById('totalDisplay');
+
+        function updateTotal() {
+            let seats = parseInt(seatsInput.value, 10);
+            if (isNaN(seats) || seats < 1) seats = 1;
+            const total = Math.round(seats * unitPrice);
+            totalDisplay.textContent = total.toLocaleString('fr-FR').replace(/\u202F/g, ' ');
+        }
+
+        if (seatsInput) {
+            seatsInput.addEventListener('input', updateTotal);
+            seatsInput.addEventListener('change', updateTotal);
+            updateTotal();
+        }
+
+        // 2. Masque de saisie uniforme et validation dynamique des indicatifs régionaux
+        const countrySelect = document.getElementById('phoneCountrySelect');
+        const phoneInput = document.getElementById('phoneInput');
+
+        if (countrySelect && phoneInput) {
+            let rawVal = phoneInput.value.trim();
+            if (rawVal.startsWith('+49') || (rawVal.startsWith('01') && rawVal.length >= 11)) {
+                countrySelect.value = '+49';
+                phoneInput.value = rawVal.replace(/^\+49\s*|^01/, '').trim();
+            } else if (rawVal.startsWith('+33') || (rawVal.startsWith('06') || rawVal.startsWith('07'))) {
+                countrySelect.value = '+33';
+                phoneInput.value = rawVal.replace(/^\+33\s*|^0/, '').trim();
+            } else if (rawVal.startsWith('+237')) {
+                countrySelect.value = '+237';
+                phoneInput.value = rawVal.replace(/^\+237\s*/, '').trim();
+            }
+
+            function applyPhoneMask() {
+                const country = countrySelect.value;
+                let digits = phoneInput.value.replace(/\D/g, '');
+
+                if (country === '+237') {
+                    phoneInput.placeholder = '6XX XXX XXX';
+                    phoneInput.maxLength = 11;
+                    if (digits.length > 9) digits = digits.substring(0, 9);
+                    let formatted = '';
+                    if (digits.length > 0) formatted += digits.substring(0, 3);
+                    if (digits.length > 3) formatted += ' ' + digits.substring(3, 6);
+                    if (digits.length > 6) formatted += ' ' + digits.substring(6, 9);
+                    phoneInput.value = formatted;
+                } else if (country === '+49') {
+                    phoneInput.placeholder = '176 3532 1633';
+                    phoneInput.maxLength = 14;
+                    if (digits.startsWith('0')) digits = digits.substring(1);
+                    if (digits.length > 11) digits = digits.substring(0, 11);
+                    let formatted = '';
+                    if (digits.length > 0) formatted += digits.substring(0, 3);
+                    if (digits.length > 3) formatted += ' ' + digits.substring(3, 7);
+                    if (digits.length > 7) formatted += ' ' + digits.substring(7, 11);
+                    phoneInput.value = formatted;
+                } else if (country === '+33') {
+                    phoneInput.placeholder = '6 12 34 56 78';
+                    phoneInput.maxLength = 14;
+                    if (digits.startsWith('0')) digits = digits.substring(1);
+                    if (digits.length > 9) digits = digits.substring(0, 9);
+                    let formatted = '';
+                    if (digits.length > 0) formatted += digits.substring(0, 1);
+                    for (let i = 1; i < digits.length && i < 9; i += 2) {
+                        formatted += ' ' + digits.substring(i, i + 2);
+                    }
+                    phoneInput.value = formatted;
+                }
+            }
+
+            countrySelect.addEventListener('change', applyPhoneMask);
+            phoneInput.addEventListener('input', applyPhoneMask);
+            // 3. Validation en temps réel avec indicateur visuel (coche verte)
+            const nameInput = document.getElementById('nameInput');
+            const idNumberInput = document.getElementById('idNumberInput');
+            const emailInput = document.getElementById('emailInput');
+            const nameHint = document.getElementById('nameValidHint');
+            const idHint = document.getElementById('idValidHint');
+            const phoneHint = document.getElementById('phoneValidHint');
+            const emailHint = document.getElementById('emailValidHint');
+
+            function validateField(input, condition, hint) {
+                if (!input) return;
+                if (condition) {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                    if (hint) hint.classList.remove('d-none');
+                } else {
+                    input.classList.remove('is-valid');
+                    if (hint) hint.classList.add('d-none');
+                }
+            }
+
+            if (nameInput) {
+                nameInput.addEventListener('input', function() {
+                    validateField(this, this.value.trim().length >= 3, nameHint);
+                });
+                validateField(nameInput, nameInput.value.trim().length >= 3, nameHint);
+            }
+
+            if (idNumberInput) {
+                idNumberInput.addEventListener('input', function() {
+                    validateField(this, this.value.trim().length >= 4, idHint);
+                });
+                validateField(idNumberInput, idNumberInput.value.trim().length >= 4, idHint);
+            }
+
+            if (emailInput) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                emailInput.addEventListener('input', function() {
+                    validateField(this, emailRegex.test(this.value.trim()), emailHint);
+                });
+                validateField(emailInput, emailRegex.test(emailInput.value.trim()), emailHint);
+            }
+
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function() {
+                    let digits = this.value.replace(/\D/g, '');
+                    let isValid = (countrySelect.value === '+237') ? (digits.length === 9) : (digits.length >= 8);
+                    validateField(this, isValid, phoneHint);
+                });
+                let initDigits = phoneInput.value.replace(/\D/g, '');
+                let isValid = (countrySelect.value === '+237') ? (initDigits.length === 9) : (initDigits.length >= 8);
+                validateField(phoneInput, isValid, phoneHint);
+            }
+
+            const bookingForm = document.getElementById('bookingForm');
+            if (bookingForm) {
+                bookingForm.addEventListener('submit', function() {
+                    const country = countrySelect.value;
+                    let val = phoneInput.value.trim();
+                    if (country !== '+' && !val.startsWith('+')) {
+                        phoneInput.value = country + ' ' + val;
+                    }
+                });
+            }
+        }
+    });
+</script>
+
+<!-- Modale Conditions Générales de Vente (CGV) -->
+<div class="modal fade" id="modalCGV" tabindex="-1" aria-labelledby="modalCGVLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-bottom p-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalCGVLabel">Conditions Générales de Transport Interurbain</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body p-4 text-muted small" style="line-height: 1.6;">
+                <h6 class="fw-bold text-dark">1. Contrôle d'Identité Obligatoire</h6>
+                <p>Conformément aux décrets ministériels réglementant le transport routier interurbain de personnes au Cameroun, chaque passager doit obligatoirement se munir de l'original de sa pièce d'identité officielle (CNI, Passeport en cours de validité ou Récépissé certifié). Les copies numériques ou photocopies non certifiées ne sont pas acceptées à l'embarquement.</p>
+
+                <h6 class="fw-bold text-dark mt-3">2. Horaires et Présentation à la Gare</h6>
+                <p>Le passager est tenu de se présenter au quai de la compagnie au moins <strong>30 minutes</strong> avant l'heure de départ indiquée sur le titre de transport pour les formalités de pesée des bagages et d'enregistrement nominatif.</p>
+
+                <h6 class="fw-bold text-dark mt-3">3. Franchise Bagages & Fret</h6>
+                <p>Chaque billet standard inclut le transport d'un bagage en soute d'un poids maximum de 30 kg et d'un bagage à main de dimensions réduites. Tout excédent fera l'objet d'une tarification au guichet selon la grille officielle de l'agence.</p>
+
+                <h6 class="fw-bold text-dark mt-3">4. Annulation et Report</h6>
+                <p>Toute demande d'annulation ou de report doit être effectuée au moins 2 heures avant le départ prévu. Au-delà de ce délai, le billet est réputé consommé.</p>
+            </div>
+            <div class="modal-footer border-0 p-3 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold" data-bs-dismiss="modal">J'ai compris</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

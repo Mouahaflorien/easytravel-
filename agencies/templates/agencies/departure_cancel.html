@@ -1,0 +1,127 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+{% block title %}Annulation du Départ - {{ departure.line.name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-3">
+    <div class="col-lg-8 col-xl-7">
+        
+        <!-- Carte principale d'annulation -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+            <div class="card-header bg-danger bg-opacity-10 border-0 p-4 text-center">
+                <div class="d-inline-flex align-items-center justify-content-center p-3 rounded-circle bg-danger bg-opacity-15 text-danger mb-2">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <h4 class="fw-bold text-danger mb-1">Annuler ce départ</h4>
+                <p class="text-muted small mb-0">Préservation de l'historique comptable et protection des passagers</p>
+            </div>
+
+            <div class="card-body p-4 p-md-5">
+                
+                <!-- Alerte explicative : Distinction Annulation vs Suppression -->
+                <div class="alert alert-warning border-0 rounded-3 p-3 mb-4 d-flex align-items-start gap-3">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-warning-emphasis flex-shrink-0 mt-0.5">
+                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div class="small">
+                        <strong class="text-dark d-block mb-1">Pourquoi annuler plutôt que supprimer ?</strong>
+                        Ce départ compte des réservations. Pour éviter toute perte de traçabilité, les données de vente ne doivent jamais être effacées.
+                        L'annulation libérera le véhicule et le chauffeur tout en conservant l'historique officiel pour vos bilans et le remboursement des voyageurs.
+                    </div>
+                </div>
+
+                <!-- Récapitulatif du Départ -->
+                <div class="p-3 bg-light rounded-3 mb-4">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Ligne & Trajet</span>
+                            <strong class="text-dark fs-6">{{ departure.line.name }}</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Date & Heure programmées</span>
+                            <strong class="text-dark fs-6">{{ departure.date|date:"d/m/Y" }} à {{ departure.time|time:"H:i" }}</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Véhicule assigné</span>
+                            <span class="text-dark fw-medium">{{ departure.vehicle.registration|default:"Aucun" }} ({{ departure.vehicle.vehicle_type|default:"Bus" }})</span>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted small d-block">Chauffeur</span>
+                            <span class="text-dark fw-medium">{{ departure.driver.full_name|default:"Non assigné" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compteur des passagers concernés -->
+                <div class="d-flex align-items-center justify-content-between p-3 rounded-3 border border-danger border-opacity-25 bg-danger bg-opacity-10 mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="fs-1 fw-bold text-danger">{{ passenger_count }}</div>
+                        <div>
+                            <strong class="text-dark d-block">Passager(s) impacté(s)</strong>
+                            <small class="text-muted">{{ booking_count }} dossier(s) de réservation actif(s)</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-danger rounded-pill px-3 py-1.5 fw-semibold">
+                        Départ avec passagers
+                    </span>
+                </div>
+
+                <!-- Liste sommaire des réservations concernées -->
+                {% if valid_bookings %}
+                <h6 class="fw-bold text-dark mb-2 small text-uppercase" style="letter-spacing: 0.5px;">Voyageurs à contacter / rembourser :</h6>
+                <div class="table-responsive border rounded-3 mb-4" style="max-height: 220px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 align-middle">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3">Réf.</th>
+                                <th>Passager</th>
+                                <th>Téléphone</th>
+                                <th class="text-center">Places</th>
+                                <th class="pe-3 text-end">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for b in valid_bookings %}
+                            <tr>
+                                <td class="ps-3 font-monospace small fw-bold text-primary">{{ b.reference }}</td>
+                                <td class="fw-semibold text-dark">{{ b.traveler_name }}</td>
+                                <td class="small">{{ b.traveler_phone|format_phone }}</td>
+                                <td class="text-center fw-bold">{{ b.seats_reserved }}</td>
+                                <td class="pe-3 text-end fw-semibold">{{ b.total_amount|format_money }} FCFA</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <!-- Formulaire de confirmation -->
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <a href="{% url 'agencies:departure_list' %}" class="btn btn-light rounded-pill px-4 fw-semibold border">
+                            Conserver ce départ (Retour)
+                        </a>
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold d-inline-flex align-items-center gap-2 shadow-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                            <span>Confirmer l'annulation du départ</span>
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

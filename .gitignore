@@ -1,0 +1,47 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+venv/
+env/
+.venv/
+ENV/
+
+# Django Database (local SQLite)
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+
+# Environment & Secret files
+.env
+.env.local
+.env.*.local
+
+# Static & Media files
+staticfiles/
+media/agency_logos/*
+media/profile_pictures/*
+!media/.gitkeep
+!media/agency_logos/.gitkeep
+!media/profile_pictures/.gitkeep
+
+# IDEs & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Operating System
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs & Cache
+*.log
+.system_generated/
+scratch/
+*.tar.gz

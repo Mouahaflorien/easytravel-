@@ -1,0 +1,204 @@
+{% extends 'travel/base.html' %}
+
+{% block title %}Connexion & Inscription Voyageur{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            
+            <!-- Message de redirection vers réservation -->
+            {% if next and next != 'travel:home' %}
+            <div class="alert alert-warning border-0 rounded-4 shadow-sm p-3 mb-4 d-flex align-items-center gap-3">
+                <div class="text-warning-emphasis flex-shrink-0">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                        <circle cx="12" cy="12" r="2"></circle>
+                        <path d="M6 12h.01M18 12h.01"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">Authentification requise pour réserver</h6>
+                    <p class="small mb-0 text-muted">
+                        Pour des raisons de conformité et de sécurité des transports, la réservation de billet nécessite un compte voyageur. Connectez-vous ou créez votre compte ci-dessous pour finaliser votre billet.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <!-- Navigation Onglets Connexion / Inscription -->
+                <div class="card-header bg-white border-bottom p-0">
+                    <ul class="nav nav-tabs nav-justified border-0" id="authTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-3 fw-bold border-0 d-flex align-items-center justify-content-center gap-2 {% if active_tab != 'register' %}active text-primary border-bottom border-primary border-3{% else %}text-muted{% endif %}" 
+                                    id="login-tab" data-bs-toggle="tab" data-bs-target="#login-pane" type="button" role="tab">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                                    <polyline points="10 17 15 12 10 7"></polyline>
+                                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                                </svg>
+                                <span>Se connecter</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-3 fw-bold border-0 d-flex align-items-center justify-content-center gap-2 {% if active_tab == 'register' %}active text-primary border-bottom border-primary border-3{% else %}text-muted{% endif %}" 
+                                    id="register-tab" data-bs-toggle="tab" data-bs-target="#register-pane" type="button" role="tab">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="8.5" cy="7" r="4"></circle>
+                                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                                </svg>
+                                <span>Créer un compte</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-4 p-md-5">
+                    <div class="tab-content" id="authTabsContent">
+                        
+                        <!-- ================= ONGLET 1 : CONNEXION ================= -->
+                        <div class="tab-pane fade {% if active_tab != 'register' %}show active{% endif %}" id="login-pane" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <h4 class="fw-bold text-dark mb-1">Bon retour parmi nous</h4>
+                                <p class="text-muted small">Accédez à vos billets et effectuez vos réservations</p>
+                            </div>
+
+                            {% if login_error %}
+                            <div class="alert alert-danger border-0 rounded-3 py-2.5 small mb-3 d-flex align-items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger flex-shrink-0">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <span>{{ login_error }}</span>
+                            </div>
+                            {% endif %}
+
+                            <form method="post" action="{% url 'accounts:login' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="action_login" value="1">
+                                <input type="hidden" name="next" value="{{ next }}">
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small text-muted">Email ou Nom d'utilisateur</label>
+                                    <input type="text" name="identifier" class="form-control py-2 rounded-3" placeholder="ex: contact@exemple.cm ou nom d'utilisateur" required>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label fw-semibold small text-muted mb-0">Mot de passe</label>
+                                    </div>
+                                    <input type="password" name="password" class="form-control py-2 rounded-3" placeholder="••••••••" required>
+                                </div>
+
+                                <button type="submit" class="btn btn-brand w-100 py-3 rounded-pill fw-bold fs-6 d-flex align-items-center justify-content-center gap-2">
+                                    <span>Se connecter et continuer</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- ================= ONGLET 2 : INSCRIPTION VOYAGEUR ================= -->
+                        <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="register-pane" role="tabpanel">
+                            <div class="text-center mb-4">
+                                <h4 class="fw-bold text-dark mb-1">Nouveau voyageur</h4>
+                                <p class="text-muted small">Créez votre profil officiel en 1 minute</p>
+                            </div>
+
+                            {% if reg_error %}
+                            <div class="alert alert-danger border-0 rounded-3 py-2.5 small mb-3 d-flex align-items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-danger flex-shrink-0">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <span>{{ reg_error }}</span>
+                            </div>
+                            {% endif %}
+
+                            <form method="post" action="{% url 'accounts:register' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ next }}">
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small text-muted">Nom complet (selon pièce d'identité)</label>
+                                    <input type="text" name="full_name" class="form-control py-2 rounded-3" 
+                                           placeholder="ex: Paul Biya, Emmanuel Macron" value="{{ reg_data.full_name }}" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small text-muted">Adresse Email (pour recevoir le billet)</label>
+                                    <input type="email" name="email" class="form-control py-2 rounded-3" 
+                                           placeholder="votre.email@domaine.com" value="{{ reg_data.email }}" required>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold small text-muted">Numéro de téléphone</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light fw-bold text-dark" style="font-size: 0.85rem;">+237</span>
+                                        <input type="tel" name="phone" class="form-control py-2" 
+                                               placeholder="6XX XX XX XX" value="{{ reg_data.phone }}" required>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 0.75rem;">Orange, MTN, Camtel ou Nexttel (9 chiffres).</small>
+                                </div>
+
+                                <div class="row g-2 mb-3">
+                                    <div class="col-sm-5">
+                                        <label class="form-label fw-semibold small text-muted">Type de pièce</label>
+                                        <select name="id_type" class="form-select py-2 rounded-3" required>
+                                            <option value="CNI" {% if reg_data.id_type == 'CNI' %}selected{% endif %}>CNI</option>
+                                            <option value="PASSPORT" {% if reg_data.id_type == 'PASSPORT' %}selected{% endif %}>Passeport</option>
+                                            <option value="RECEIPT" {% if reg_data.id_type == 'RECEIPT' %}selected{% endif %}>Récépissé</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <label class="form-label fw-semibold small text-muted">Numéro de pièce</label>
+                                        <input type="text" name="id_number" class="form-control py-2 rounded-3" 
+                                               placeholder="ex: 1102938475" value="{{ reg_data.id_number }}" required>
+                                    </div>
+                                </div>
+
+                                <div class="row g-2 mb-4">
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold small text-muted">Mot de passe</label>
+                                        <input type="password" name="password" class="form-control py-2 rounded-3" placeholder="6+ caractères" required>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label fw-semibold small text-muted">Confirmation</label>
+                                        <input type="password" name="password_confirm" class="form-control py-2 rounded-3" placeholder="Répéter" required>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-brand w-100 py-3 rounded-pill fw-bold fs-6 d-flex align-items-center justify-content-center gap-2">
+                                    <span>Créer mon compte et continuer</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        <polyline points="12 5 19 12 12 19"></polyline>
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Note de confiance -->
+            <div class="text-center text-muted small mt-4 d-flex align-items-center justify-content-center gap-1.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-secondary">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                <span>Vos informations sont confidentielles et utilisées uniquement pour l'émission légale de vos billets de transport.</span>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

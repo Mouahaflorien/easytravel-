@@ -1,0 +1,390 @@
+{% extends 'agencies/base_agency.html' %}
+{% load agency_extras %}
+
+
+{% block title %}Centre de Traitement des Anomalies & Sentinelle IA - {{ current_agency.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- En-tête Sentinelle IA -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-1 fw-semibold d-inline-flex align-items-center gap-1.5" style="font-size: 0.78rem;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <span>Sentinelle Gemini Active</span>
+                </span>
+                <span class="text-muted small">• Principe de gouvernance : <em>« Gemini signale, un humain tranche »</em></span>
+            </div>
+            <h3 class="fw-bold text-dark mb-0">Centre de Traitement des Anomalies & Fraudes</h3>
+            <p class="text-muted small mb-0">Détection asynchrone des comportements suspects, écarts de caisse, tarifs hors grille et incohérences.</p>
+        </div>
+
+        <div class="d-flex align-items-center gap-2">
+            <!-- Bouton Déclencheur d'Audit Asynchrone -->
+            <form action="{% url 'agencies:anomaly_run_audit' %}" method="post" id="formRunAudit">
+                {% csrf_token %}
+                <button type="submit" id="btnRunAudit" class="btn btn-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" id="auditIcon">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span id="auditBtnText">Lancer l'Audit Gemini</span>
+                </button>
+            </form>
+
+            <a href="{% url 'agencies:notification_list' %}" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span>Journal des Alertes</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Cards : Synthèse d'Audit -->
+    <div class="row g-3 mb-4">
+        <!-- 1. En attente d'arbitrage -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card p-3.5 h-100 shadow-sm" style="background-color: #fffdf5; border: 1px solid #fef3c7; border-left: 5px solid #d97706 !important; border-radius: 14px;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="stat-title fw-bold" style="color: #92400e; letter-spacing: 0.5px;">À Trancher (En attente)</span>
+                    <div class="p-2 rounded-3 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px; background-color: #fde68a; color: #78350f;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" style="font-size: 2.6rem; font-weight: 800; color: #78350f; line-height: 1.1; margin-bottom: 0.25rem;">{{ stats.pending }}</div>
+                <div class="mt-2 small d-flex justify-content-between align-items-center flex-wrap gap-1">
+                    <span style="color: #a16207; font-weight: 500;">Décision humaine requise</span>
+                    {% if stats.critical > 0 %}
+                    <span class="badge rounded-pill fw-bold shadow-2xs" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.72rem;">
+                        {{ stats.critical }} critique(s)
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Fraudes / Incohérences confirmées -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card p-3.5 h-100 shadow-sm" style="background-color: #fef2f2; border: 1px solid #fee2e2; border-left: 5px solid #ef4444 !important; border-radius: 14px;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="stat-title fw-bold" style="color: #991b1b; letter-spacing: 0.5px;">Fraudes Confirmées</span>
+                    <div class="p-2 rounded-3 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px; background-color: #fecaca; color: #991b1b;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" style="font-size: 2.6rem; font-weight: 800; color: #7f1d1d; line-height: 1.1; margin-bottom: 0.25rem;">{{ stats.confirmed }}</div>
+                <div class="mt-2 small">
+                    <span style="color: #b91c1c; font-weight: 500;">Sanctionnées ou annulées</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Régularisées -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card p-3.5 h-100 shadow-sm" style="background-color: #f0fdf4; border: 1px solid #dcfce7; border-left: 5px solid #22c55e !important; border-radius: 14px;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="stat-title fw-bold" style="color: #166534; letter-spacing: 0.5px;">Régularisées</span>
+                    <div class="p-2 rounded-3 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px; background-color: #bbf7d0; color: #166534;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" style="font-size: 2.6rem; font-weight: 800; color: #14532d; line-height: 1.1; margin-bottom: 0.25rem;">{{ stats.regularized }}</div>
+                <div class="mt-2 small">
+                    <span style="color: #15803d; font-weight: 500;">Paiements ou billets ajustés</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Classées sans suite (Faux positifs) -->
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card p-3.5 h-100 shadow-sm" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #64748b !important; border-radius: 14px;">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="stat-title fw-bold" style="color: #475569; letter-spacing: 0.5px;">Faux Positifs Écartés</span>
+                    <div class="p-2 rounded-3 d-flex align-items-center justify-content-center shadow-xs" style="width: 38px; height: 38px; background-color: #e2e8f0; color: #334155;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                        </svg>
+                    </div>
+                </div>
+                <div class="stat-value" style="font-size: 2.6rem; font-weight: 800; color: #1e293b; line-height: 1.1; margin-bottom: 0.25rem;">{{ stats.dismissed }}</div>
+                <div class="mt-2 small">
+                    <span style="color: #64748b; font-weight: 500;">Vérifiées conformes par un agent</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barre de Filtrage Moderne (Bouton Filtrer aligné sur la charte principale) -->
+    <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <form method="get" class="row g-2 align-items-center">
+            <!-- Recherche textuelle -->
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </span>
+                    <input type="text" name="q" value="{{ search_query }}" class="form-control bg-light border-start-0" placeholder="Rechercher par titre, passager, référence...">
+                </div>
+            </div>
+
+            <!-- Filtre Statut -->
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>À trancher (En attente)</option>
+                    <option value="all" {% if current_status == 'all' %}selected{% endif %}>Tous les statuts</option>
+                    <option value="confirmed" {% if current_status == 'confirmed' %}selected{% endif %}>Confirmées / Sanctionnées</option>
+                    <option value="regularized" {% if current_status == 'regularized' %}selected{% endif %}>Régularisées</option>
+                    <option value="dismissed" {% if current_status == 'dismissed' %}selected{% endif %}>Classées sans suite</option>
+                </select>
+            </div>
+
+            <!-- Filtre Gravité -->
+            <div class="col-md-2">
+                <select name="severity" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Toutes gravités</option>
+                    {% for code, label in severities %}
+                    <option value="{{ code }}" {% if current_severity == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Filtre Catégorie -->
+            <div class="col-md-3">
+                <select name="category" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">Toutes catégories</option>
+                    {% for code, label in categories %}
+                    <option value="{{ code }}" {% if current_category == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-1 d-flex gap-1">
+                <!-- Bouton Filtrer aligné sur la charte principale (au lieu de btn-dark) -->
+                <button type="submit" class="btn btn-sm btn-primary w-100 rounded-pill fw-semibold shadow-xs">Filtrer</button>
+                {% if search_query or current_status != 'pending' or current_severity or current_category %}
+                <a href="{% url 'agencies:anomaly_list' %}" class="btn btn-sm btn-light border rounded-pill" title="Réinitialiser">✕</a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Table des Anomalies Détectées (Aération verticale et hiérarchie visuelle) -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-top mb-0 table-anomalies">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4 py-3" style="width: 120px;">Gravité</th>
+                        <th class="py-3" style="width: 180px;">Catégorie</th>
+                        <th class="py-3">Anomalie & Explication Gemini</th>
+                        <th class="py-3" style="width: 150px;">Élément ciblé</th>
+                        <th class="py-3" style="width: 130px;">Statut</th>
+                        <th class="text-end pe-4 py-3" style="width: 160px;">Arbitrage Humain</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anomaly in anomalies %}
+                    <tr class="anomaly-row">
+                        <!-- 1. Gravité : Badges Haute Accessibilité (WCAG AAA) -->
+                        <td class="ps-4 py-3.5 align-top">
+                            {% if anomaly.severity == 'critical' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.74rem;">
+                                    <span class="rounded-circle bg-danger d-inline-block" style="width: 6px; height: 6px;"></span>
+                                    <span>Critique</span>
+                                </span>
+                            {% elif anomaly.severity == 'high' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-2xs" style="background-color: #fef3c7; color: #78350f; border: 1px solid #fcd34d; font-size: 0.74rem;">
+                                    <span class="rounded-circle d-inline-block" style="width: 6px; height: 6px; background-color: #d97706;"></span>
+                                    <span>Élevée</span>
+                                </span>
+                            {% elif anomaly.severity == 'medium' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" style="background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; font-size: 0.74rem;">
+                                    <span class="rounded-circle bg-info d-inline-block" style="width: 6px; height: 6px;"></span>
+                                    <span>Moyenne</span>
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-2xs" style="background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 0.74rem;">
+                                    <span class="rounded-circle bg-secondary d-inline-block" style="width: 6px; height: 6px;"></span>
+                                    <span>Faible</span>
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 2. Catégorie -->
+                        <td class="py-3.5 align-top">
+                            <strong class="text-dark small d-block mb-1">{{ anomaly.get_category_display }}</strong>
+                            <span class="text-muted d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-muted">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span>{{ anomaly.detected_at|date:"d/m/Y H:i" }}</span>
+                            </span>
+                        </td>
+
+                        <!-- 3. Titre & Explication de l'IA avec variables mises en valeur & conteneur teinté -->
+                        <td class="py-3.5 align-top">
+                            <div class="fw-bold text-dark mb-1.5" style="font-size: 0.95rem;">{{ anomaly.title }}</div>
+                            <div class="text-secondary small mb-2 anomaly-explanation" style="font-size: 0.84rem; line-height: 1.55; color: #334155 !important;">
+                                {{ anomaly.description|highlight_audit_data }}
+                            </div>
+                            
+                            <!-- Conseil IA dans un conteneur teinté indigo contrasté et isolé -->
+                            {% if anomaly.gemini_recommendation %}
+                            <div class="p-2.5 rounded-3 mt-2 border d-flex align-items-start gap-2 shadow-2xs" style="background-color: #f5f3ff; border-color: #ddd6fe !important;">
+                                <div class="p-1 rounded bg-white shadow-xs text-primary flex-shrink-0 mt-0.5" style="border: 1px solid #e0e7ff;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                                    </svg>
+                                </div>
+                                <div style="font-size: 0.8rem; line-height: 1.5; color: #312e81;">
+                                    <strong class="d-inline-block me-1" style="color: #4338ca;">Conseil Sentinelle IA :</strong>
+                                    <span>{{ anomaly.gemini_recommendation|highlight_audit_data }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- 4. Élément ciblé -->
+                        <td class="py-3.5 align-top">
+                            {% if anomaly.booking %}
+                                <a href="{% url 'agencies:booking_list' %}?q={{ anomaly.booking.reference }}" class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 text-decoration-none d-block text-truncate mb-1.5 py-1">
+                                    Billet {{ anomaly.booking.reference }}
+                                </a>
+                                <small class="text-muted d-block text-truncate fw-medium" style="font-size: 0.74rem;">{{ anomaly.booking.traveler_name }}</small>
+                            {% elif anomaly.departure %}
+                                <a href="{% url 'agencies:departure_manifest' anomaly.departure.id %}" class="badge bg-dark bg-opacity-10 text-dark border text-decoration-none d-block text-truncate mb-1.5 py-1">
+                                    Départ #{{ anomaly.departure.id }}
+                                </a>
+                                <small class="text-muted d-block text-truncate fw-medium" style="font-size: 0.74rem;">{{ anomaly.departure.line.name }}</small>
+                            {% elif anomaly.cashier %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border d-block text-truncate mb-1.5 py-1">
+                                    Caissier : {{ anomaly.cashier.username }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 5. Statut -->
+                        <td class="py-3.5 align-top">
+                            {% if anomaly.status == 'pending' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-2xs" style="background-color: #fffbeb; color: #92400e; border: 1px solid #fde68a; font-size: 0.74rem;">
+                                    En attente
+                                </span>
+                            {% elif anomaly.status == 'confirmed' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-2xs" style="background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.74rem;">
+                                    Sanctionnée
+                                </span>
+                            {% elif anomaly.status == 'regularized' %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-2xs" style="background-color: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; font-size: 0.74rem;">
+                                    Régularisée
+                                </span>
+                            {% else %}
+                                <span class="badge rounded-pill px-2.5 py-1.5 fw-semibold shadow-2xs" style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 0.74rem;">
+                                    Classée sans suite
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- 6. Actions d'arbitrage : Vrai bouton CTA avec affordance forte -->
+                        <td class="text-end pe-4 py-3.5 align-top">
+                            <a href="{% url 'agencies:anomaly_detail' anomaly.id %}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm text-nowrap anomaly-btn-trancher" style="font-size: 0.78rem;" title="Arbitrer et appliquer des sanctions">
+                                <span>Trancher</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    <polyline points="12 5 19 12 12 19"></polyline>
+                                </svg>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <div class="py-4">
+                                <div class="p-3 bg-light rounded-circle d-inline-flex mb-3 text-success">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                </div>
+                                <h6 class="fw-bold text-dark">Aucune anomalie suspecte pour ce filtre</h6>
+                                <p class="text-muted small mb-3">La Sentinelle Gemini n'a détecté aucun comportement douteux répondant aux critères.</p>
+                                <form action="{% url 'agencies:anomaly_run_audit' %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold shadow-xs">
+                                        Relancer un scan complet
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Aération verticale généreuse et transitions pour la table d'audit */
+.table-anomalies td {
+    padding-top: 1.25rem !important;
+    padding-bottom: 1.25rem !important;
+}
+.anomaly-row {
+    transition: background-color 0.15s ease;
+}
+.anomaly-row:hover {
+    background-color: #f8fafc !important;
+}
+
+/* Bouton CTA Trancher : Affordance augmentée avec élévation et micro-interaction flèche */
+.anomaly-btn-trancher {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.anomaly-btn-trancher:hover {
+    transform: translateY(-1px) translateX(1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28) !important;
+    filter: brightness(1.04);
+}
+.anomaly-btn-trancher svg {
+    transition: transform 0.2s ease;
+}
+.anomaly-btn-trancher:hover svg {
+    transform: translateX(3px);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formRunAudit = document.getElementById('formRunAudit');
+    const btnRunAudit = document.getElementById('btnRunAudit');
+    const auditBtnText = document.getElementById('auditBtnText');
+    const auditIcon = document.getElementById('auditIcon');
+
+    if (formRunAudit) {
+        formRunAudit.addEventListener('submit', function() {
+            btnRunAudit.disabled = true;
+            auditBtnText.textContent = "Analyse Gemini en cours...";
+            auditIcon.classList.add('spinner-border', 'spinner-border-sm');
+        });
+    }
+});
+</script>
+{% endblock %}

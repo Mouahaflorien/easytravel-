@@ -1,0 +1,79 @@
+{% extends 'agencies/base_agency.html' %}
+
+{% block title %}Notifications & Alertes de Fraude - {{ current_agency.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0">Journal des Notifications & Alertes</h3>
+            <p class="text-muted small mb-0">Historique des alertes émises par la Sentinelle IA Gemini et des événements d'exploitation.</p>
+        </div>
+
+        <div class="d-flex gap-2">
+            {% if unread_count > 0 %}
+            <form action="{% url 'agencies:mark_notifications_read' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1.5 fw-semibold shadow-xs">
+                    Marquer tout comme lu ({{ unread_count }})
+                </button>
+            </form>
+            {% endif %}
+
+            <a href="{% url 'agencies:anomaly_list' %}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 fw-semibold shadow-xs d-inline-flex align-items-center gap-1.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Centre d'Arbitrage</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+        <div class="list-group list-group-flush">
+            {% for notif in notifications %}
+            <div class="list-group-item p-3.5 border-bottom {% if not notif.is_read %}bg-light bg-opacity-50{% endif %}">
+                <div class="d-flex align-items-start justify-content-between gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="p-2 rounded-3 bg-{{ notif.level }} bg-opacity-10 text-{{ notif.level }} flex-shrink-0 mt-1">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <strong class="text-dark">{{ notif.title }}</strong>
+                                {% if not notif.is_read %}
+                                <span class="badge bg-danger rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">Non lu</span>
+                                {% endif %}
+                                <span class="badge bg-light text-muted border rounded-pill px-2 py-0.5" style="font-size: 0.68rem;">
+                                    {{ notif.get_level_display }}
+                                </span>
+                            </div>
+                            <p class="text-secondary small mb-2" style="line-height: 1.45;">
+                                {{ notif.message }}
+                            </p>
+                            <small class="text-muted" style="font-size: 0.72rem;">
+                                Émis le {{ notif.created_at|date:"d/m/Y à H:i:s" }} ({{ notif.created_at|timesince }} passés)
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="flex-shrink-0">
+                        {% if notif.anomaly %}
+                        <a href="{% url 'agencies:anomaly_detail' notif.anomaly.id %}" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold" style="font-size: 0.75rem;">
+                            Arbitrer ➔
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5 text-muted">
+                <p class="mb-0">Aucune notification enregistrée.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
