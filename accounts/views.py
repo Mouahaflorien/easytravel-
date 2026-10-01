@@ -1,8 +1,11 @@
+from urllib.parse import quote
 from django.shortcuts import render, redirect
+from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+
 from .models import User
 from .validators import (
     validate_cameroon_phone, 
@@ -122,11 +125,12 @@ def traveler_register(request):
                 is_active=False
             )
             
-            # Envoi du lien d'activation sécurisé par email
-            send_account_activation_email(request, user)
+            # Envoi du lien d'activation sécurisé par email avec URL de retour
+            send_account_activation_email(request, user, next_url=next_url)
             
             request.session['activation_email'] = clean_email
-            return redirect('accounts:activation_pending')
+            request.session['pending_next_url'] = next_url
+            return redirect(f"{reverse('accounts:activation_pending')}?next={quote(next_url)}")
             
         except ValidationError as e:
             reg_error = e.message if hasattr(e, 'message') else str(e)
@@ -141,28 +145,66 @@ def traveler_register(request):
 
 def activation_pending(request):
     """
-    Affiche la page d'information invitant l'utilisateur à valider son email.
+    Affiche la page d'information invitant l'utilisateur à valider son email,
+    avec prévisualisation de la réservation en cours si applicable.
     """
     email = request.GET.get('email') or request.session.get('activation_email', '')
+    booking_ref = request.GET.get('booking') or request.session.get('pending_booking_ref', '')
+    next_url = request.GET.get('next') or request.session.get('pending_next_url', '')
+
+    booking = None
+    if booking_ref:
+        booking = Booking.objects.filter(reference=booking_ref).select_related(
+            'departure', 'departure__agency', 'departure_stop__city', 'arrival_stop__city'
+        ).first()
+
     return render(request, 'accounts/activation_pending.html', {
-        'email': email
+        'email': email,
+        'booking': booking,
+        'next_url': next_url,
     })
 
 
 def activate_account(request, uidb64, token):
     """
-    Valide le jeton d'authentification reçu par email et active le compte voyageur.
+    Valide le jeton d'authentification reçu par email, active le compte voyageur
+    et confirme automatiquement les réservations en attente liées au compte.
     """
     user = verify_activation_token(uidb64, token)
     
     if user is not None:
         user.is_active = True
         user.save()
+
+        # Activer d'éventuelles réservations en attente d'authentification par email
+        pending_bookings = Booking.objects.filter(user=user, status='pending').select_related('departure')
+        last_confirmed_booking = None
+        for b in pending_bookings:
+            if b.seats_reserved <= b.departure.available_capacity:
+                b.status = 'confirmed'
+                b.departure.available_capacity -= b.seats_reserved
+                b.departure.save()
+                b.save()
+                last_confirmed_booking = b
+            else:
+                messages.warning(request, f"La capacité pour le voyage {b.departure} n'est plus suffisante.")
+
         login(request, user)
-        messages.success(request, f"Félicitations {user.first_name or user.username} ! Votre compte est activé avec succès. Bienvenue sur EasyTravel.")
+        messages.success(request, f"Félicitations {user.first_name or user.username} ! Votre compte a été authentifié et activé avec succès.")
+
+        # Si une réservation vient d'être débloquée, rediriger directement vers sa confirmation / e-billet
+        if last_confirmed_booking:
+            return redirect('bookings:confirmation', reference=last_confirmed_booking.reference)
+
+        # Si l'utilisateur avait une URL de redirection (ex: finaliser une réservation)
+        next_url = request.GET.get('next')
+        if next_url and next_url != 'travel:home':
+            return redirect(next_url)
+
         return redirect('accounts:my_bookings')
     else:
         return render(request, 'accounts/activation_invalid.html')
+
 
 
 def resend_activation(request):

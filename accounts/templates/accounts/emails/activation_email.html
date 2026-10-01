@@ -113,23 +113,46 @@
         <!-- Contenu principal -->
         <div class="content">
             <h1>Bienvenue, {{ user.first_name|default:user.username }} ! 🚌</h1>
+            
+            {% if booking %}
+            <p>
+                Vous venez d'initier une réservation de voyage sur <strong>EasyTravel</strong>. 
+                Afin de sécuriser votre billet et valider votre compte voyageur auprès de la compagnie de transport, veuillez confirmer votre adresse email en cliquant sur le bouton ci-dessous.
+            </p>
+
+            <div style="background-color: #f8fafc; border-radius: 12px; padding: 18px 20px; margin: 20px 0; border: 1px solid #e2e8f0; border-left: 4px solid #f97316;">
+                <div style="font-size: 11px; font-weight: 700; color: #f97316; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Réservation en attente de validation</div>
+                <div style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                    {{ booking.departure_stop.city.name }} ➔ {{ booking.arrival_stop.city.name }}
+                </div>
+                <div style="font-size: 13px; color: #475569; line-height: 1.6;">
+                    Compagnie : <strong>{{ booking.departure.agency.name }}</strong><br>
+                    Date & Heure : <strong>{{ booking.departure.date|date:"d/m/Y" }} à {{ booking.departure.time|time:"H:i" }}</strong><br>
+                    Places : <strong>{{ booking.seats_reserved }} place(s)</strong> • Montant total : <strong>{{ booking.total_amount }} FCFA</strong><br>
+                    Référence : <span style="font-family: monospace; font-weight: 700; color: #2563eb;">{{ booking.reference }}</span>
+                </div>
+            </div>
+            {% else %}
             <p>
                 Merci d'avoir créé votre compte voyageur sur <strong>EasyTravel</strong>. 
                 Pour des raisons de sécurité et pour garantir la validité de vos e-billets auprès des compagnies de transport, nous devons vérifier votre adresse email.
             </p>
+            {% endif %}
+
             <p>
-                Veuillez cliquer sur le bouton ci-dessous pour activer immédiatement votre compte :
+                Veuillez cliquer sur le bouton ci-dessous pour activer immédiatement votre compte{% if booking %} et débloquer votre e-billet{% endif %} :
             </p>
 
             <div class="btn-wrapper">
                 <a href="{{ activation_url }}" target="_blank" class="btn">
-                    Activer mon compte EasyTravel
+                    {% if booking %}Valider mon compte & Débloquer mon billet{% else %}Activer mon compte EasyTravel{% endif %}
                 </a>
             </div>
 
             <div class="security-badge">
-                🔒 <strong>Lien sécurisé :</strong> Ce lien est strictement personnel et à usage unique. Il expire automatiquement après 24 heures pour protéger votre profil.
+                🔒 <strong>Lien sécurisé :</strong> Ce lien est strictement personnel et à usage unique. Il expire automatiquement après 24 heures pour protéger votre profil et vos réservations.
             </div>
+
 
             <p style="font-size: 14px; color: #64748b;">
                 Si vous n'êtes pas à l'origine de cette inscription, vous pouvez ignorer cet e-mail en toute tranquillité. Aucun compte ne sera activé sans validation de ce lien.

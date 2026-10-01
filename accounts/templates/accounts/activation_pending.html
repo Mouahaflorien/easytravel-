@@ -18,11 +18,29 @@
                 </div>
 
                 <h3 class="fw-bold text-dark mb-2">Vérifiez votre boîte de réception</h3>
-                <p class="text-muted mb-4">
+                <p class="text-muted mb-3">
                     Un e-mail d'authentification a été envoyé à l'adresse suivante :<br>
                     <strong class="text-dark fs-6">{{ email|default:"votre adresse email" }}</strong>
                 </p>
 
+                {% if booking %}
+                <div class="card border-0 bg-primary bg-opacity-10 rounded-4 p-3 mb-4 text-start border-start border-primary border-4">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-primary rounded-pill px-3 py-1">Réservation en attente de validation</span>
+                        <span class="fw-bold text-primary font-monospace">{{ booking.reference }}</span>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">
+                        {{ booking.departure_stop.city.name }} ➔ {{ booking.arrival_stop.city.name }}
+                    </h5>
+                    <div class="small text-muted mb-2">
+                        Compagnie : <strong>{{ booking.departure.agency.name }}</strong> • Départ le {{ booking.departure.date|date:"d/m/Y" }} à {{ booking.departure.time|time:"H:i" }}<br>
+                        Places : <strong>{{ booking.seats_reserved }} place(s)</strong> • Montant total : <strong>{{ booking.total_amount }} FCFA</strong>
+                    </div>
+                    <div class="small text-primary-emphasis fw-medium bg-white p-2 rounded-3 border">
+                        👉 <strong>Étape requise :</strong> Cliquez sur le lien reçu dans votre email pour activer votre compte et débloquer immédiatement votre e-billet avec QR Code.
+                    </div>
+                </div>
+                {% else %}
                 <div class="alert alert-light border rounded-3 p-3 text-start small text-muted mb-4">
                     <div class="d-flex align-items-start gap-2">
                         <span class="text-primary fs-5">ℹ️</span>
@@ -30,16 +48,18 @@
                             <strong>Que devez-vous faire ?</strong><br>
                             1. Ouvrez l'e-mail envoyé par <strong>EasyTravel</strong>.<br>
                             2. Cliquez sur le lien <strong>« Activer mon compte »</strong>.<br>
-                            3. Votre profil sera instantanément validé et vous pourrez finaliser vos réservations.
+                            3. Votre profil sera instantanément validé et vos réservations débloquées.
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
                 <div class="p-3 bg-light rounded-3 mb-4">
                     <p class="small text-muted mb-2">Vous n'avez pas reçu l'email après quelques minutes ?</p>
                     <form method="post" action="{% url 'accounts:resend_activation' %}" class="d-inline">
                         {% csrf_token %}
                         <input type="hidden" name="email" value="{{ email }}">
+                        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
                         <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill px-3 fw-bold">
                             Renvoyer le lien d'authentification
                         </button>
@@ -48,6 +68,7 @@
                         Pensez également à vérifier vos dossiers <em>Spams</em> ou <em>Courriers indésirables</em>.
                     </div>
                 </div>
+
 
                 <a href="{% url 'accounts:login' %}" class="btn btn-link text-decoration-none text-muted small">
                     ← Retour à la page de connexion

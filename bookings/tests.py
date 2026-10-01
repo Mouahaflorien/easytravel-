@@ -52,9 +52,76 @@ class BookingModelTest(TestCase):
             traveler_phone="677001122",
             traveler_email="roger@test.com",
             id_type="CNI",
-            id_number="99887766",
+            id_number="102938475",
             seats_reserved=1,
             total_amount=5000
         )
         self.assertIn("Roger Milla", str(booking))
         self.assertIn(booking.reference, str(booking))
+
+    def test_unauthenticated_booking_creates_account_and_requires_email_activation(self):
+        from django.test import Client
+        from django.urls import reverse
+        from django.core import mail
+        from accounts.services.email_service import generate_activation_link
+
+        client = Client()
+        mail.outbox = []
+
+        initial_capacity = self.departure.available_capacity
+        url = f"{reverse('bookings:book', kwargs={'departure_id': self.departure.id})}?start={self.stop_1.id}&end={self.stop_2.id}"
+
+        response = client.post(url, {
+            'start_id': self.stop_1.id,
+            'end_id': self.stop_2.id,
+            'name': 'Rigobert Song',
+            'phone': '699112233',
+            'email': 'rigobert.song@mslogitech.cm',
+            'id_type': 'CNI',
+            'id_number': '102938475',
+            'seats': 2,
+            'password': 'SongPassword2026!',
+            'password_confirm': 'SongPassword2026!'
+        })
+
+        # Doit rediriger vers activation_pending avec référence de réservation
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse('accounts:activation_pending'), response.url)
+
+        # Vérifier que le compte utilisateur a été créé avec is_active=False
+        new_user = User.objects.get(email='rigobert.song@mslogitech.cm')
+        self.assertFalse(new_user.is_active)
+
+        # Vérifier que la réservation a été créée en statut 'pending'
+        booking = Booking.objects.get(user=new_user)
+        self.assertEqual(booking.status, 'pending')
+        self.assertEqual(booking.seats_reserved, 2)
+
+        # La capacité n'est pas encore déduite avant vérification
+        self.departure.refresh_from_db()
+        self.assertEqual(self.departure.available_capacity, initial_capacity)
+
+        # Vérifier qu'un email d'activation a été envoyé avec la référence
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(booking.reference, mail.outbox[0].subject)
+
+        # Activation du compte via le lien reçu
+        activation_url = generate_activation_link(None, new_user, next_url=reverse('bookings:confirmation', kwargs={'reference': booking.reference}))
+        parts = activation_url.split('?')[0].rstrip('/').split('/')
+        token = parts[-1]
+        uidb64 = parts[-2]
+
+        act_response = client.get(reverse('accounts:activate_account', kwargs={'uidb64': uidb64, 'token': token}))
+        self.assertEqual(act_response.status_code, 302)
+        self.assertIn(reverse('bookings:confirmation', kwargs={'reference': booking.reference}), act_response.url)
+
+        # Après activation : le compte est actif, la réservation est confirmée, la capacité est déduite
+        new_user.refresh_from_db()
+        self.assertTrue(new_user.is_active)
+
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, 'confirmed')
+
+        self.departure.refresh_from_db()
+        self.assertEqual(self.departure.available_capacity, initial_capacity - 2)
+

@@ -1,7 +1,18 @@
 Bienvenue sur EasyTravel, {{ user.first_name|default:user.username }} !
 
+{% if booking %}
+Vous venez d'initier une réservation de voyage sur EasyTravel :
+- Trajet : {{ booking.departure_stop.city.name }} ➔ {{ booking.arrival_stop.city.name }}
+- Compagnie : {{ booking.departure.agency.name }}
+- Date et Heure : {{ booking.departure.date|date:"d/m/Y" }} à {{ booking.departure.time|time:"H:i" }}
+- Places : {{ booking.seats_reserved }} place(s) - Montant : {{ booking.total_amount }} FCFA
+- Référence : {{ booking.reference }}
+
+Pour valider votre compte et débloquer immédiatement votre billet, veuillez ouvrir le lien suivant :
+{% else %}
 Merci d'avoir créé votre compte voyageur sur EasyTravel.
-Pour valider votre adresse email et activer votre compte afin d'effectuer vos réservations en toute sécurité, veuillez ouvrir le lien suivant dans votre navigateur :
+Pour valider votre adresse email et activer votre compte afin d'effectuer vos réservations en toute sécurité, veuillez ouvrir le lien suivant :
+{% endif %}
 
 {{ activation_url }}
 
@@ -11,3 +22,4 @@ Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email
 
 L'équipe EasyTravel Cameroun - MS Logitech
 Support : {{ support_email }}
+
