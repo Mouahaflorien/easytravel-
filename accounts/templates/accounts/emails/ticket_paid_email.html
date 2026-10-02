@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre Billet EasyTravel est confirmé et réglé</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 8px 0 0;
+            opacity: 0.9;
+            font-size: 15px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .badge-success {
+            display: inline-block;
+            background-color: #dcfce7;
+            color: #15803d;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 13px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .ticket-summary {
+            background-color: #f8fafc;
+            border-left: 4px solid #2563eb;
+            border-radius: 0 8px 8px 0;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .ticket-summary p {
+            margin: 6px 0;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 14px 28px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 15px;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EasyTravel</h1>
+            <p>Plateforme Officielle de Billetterie Interurbaine</p>
+        </div>
+        <div class="content">
+            <span class="badge-success">✓ Paiement Validé • Billet Officiel Émis</span>
+            <h2 style="margin-top: 0; color: #0f172a;">Bonjour {{ booking.traveler_name }},</h2>
+            <p>Nous vous confirmons la bonne réception de votre paiement pour votre voyage avec la compagnie <strong>{{ booking.departure.agency.name }}</strong>.</p>
+            
+            <div class="ticket-summary">
+                <p><strong>Référence de Billet :</strong> <span style="font-family: monospace; font-size: 16px; color: #1e3a8a;">{{ booking.reference }}</span></p>
+                <p><strong>Trajet :</strong> {{ start_city }} → {{ end_city }}</p>
+                <p><strong>Date de Départ :</strong> {{ booking.departure.date|date:"l d F Y" }} à {{ booking.departure.time|time:"H:i" }}</p>
+                <p><strong>Places Réservées :</strong> {{ booking.seats_reserved }}</p>
+                <p><strong>Montant Réglé :</strong> {{ booking.total_amount }} FCFA</p>
+                <p><strong>Mode de Paiement :</strong> {{ booking.payment_operator|default:booking.get_payment_method_display }}</p>
+                <p><strong>ID Transaction :</strong> <span style="font-family: monospace;">{{ booking.transaction_id }}</span></p>
+            </div>
+
+            <p>Votre titre de transport sécurisé avec son <strong>QR Code d'embarquement prioritaire</strong> est prêt :</p>
+
+            <div style="text-align: center;">
+                <a href="{{ ticket_url }}" class="btn">Accéder à mon E-Billet / Imprimer le PDF</a>
+            </div>
+
+            <p style="font-size: 13px; color: #64748b;">
+                Présentez ce billet (sur votre téléphone ou imprimé) lors de l'embarquement au guichet de la compagnie au moins 30 minutes avant le départ.
+            </p>
+        </div>
+        <div class="footer">
+            <p>© EasyTravel Cameroun — Tous droits réservés.<br>
+            Besoin d'assistance ? Contactez-nous à <a href="mailto:{{ support_email }}" style="color: #2563eb;">{{ support_email }}</a></p>
+        </div>
+    </div>
+</body>
+</html>

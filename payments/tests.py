@@ -139,18 +139,73 @@ class CinetPayPaymentTests(TestCase):
     @patch.object(CinetPayService, 'is_configured', return_value=True)
     @patch.object(CinetPayService, 'initiate_payment')
     def test_view_initiate_booking_payment_redirects_to_cinetpay(self, mock_initiate, mock_configured):
-        """View initiates payment and redirects user to CinetPay payment URL."""
-        mock_initiate.return_value = (
-            True, 
-            {"payment_url": "https://checkout.cinetpay.com/pay/xyz789"}, 
-            "ET-TX-1-ABCD"
-        )
-        self.client.login(username='voyageur_test', password='secretpassword123')
+        """When simulation mode is disabled, view initiates payment and redirects user to CinetPay payment URL."""
+        from django.test import override_settings
+        with override_settings(PAYMENT_SIMULATION_MODE=False):
+            mock_initiate.return_value = (
+                True, 
+                {"payment_url": "https://checkout.cinetpay.com/pay/xyz789"}, 
+                "ET-TX-1-ABCD"
+            )
+            self.client.login(username='voyageur_test', password='secretpassword123')
+            url = reverse('payments:initiate', kwargs={'booking_id': self.booking.id})
+            response = self.client.get(url)
+
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, "https://checkout.cinetpay.com/pay/xyz789")
+
+    def test_view_initiate_redirects_to_simulation(self):
+        """When simulation mode is enabled, initiate view redirects to sandbox checkout."""
         url = reverse('payments:initiate', kwargs={'booking_id': self.booking.id})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, "https://checkout.cinetpay.com/pay/xyz789")
+        expected_url = reverse('payments:simulation_checkout', kwargs={'booking_id': self.booking.id})
+        self.assertEqual(response.url, expected_url)
+
+    def test_simulation_checkout_view(self):
+        """Simulation checkout view renders properly with booking details."""
+        url = reverse('payments:simulation_checkout', kwargs={'booking_id': self.booking.id})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.booking.reference)
+        self.assertContains(response, "MTN Mobile Money")
+        self.assertContains(response, "Orange Money")
+
+    def test_simulation_process_success(self):
+        """Simulation process handles successful payment and updates booking to paid."""
+        url = reverse('payments:simulation_process', kwargs={'booking_id': self.booking.id})
+        response = self.client.post(url, data={
+            'action': 'success',
+            'payment_method': 'orange_money',
+            'phone': '699112233',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('bookings:confirmation', kwargs={'reference': self.booking.reference}))
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.payment_status, 'paid')
+        self.assertEqual(self.booking.payment_method, 'orange_money')
+        self.assertIn('Orange Money', self.booking.payment_operator)
+        self.assertTrue(self.booking.transaction_id.startswith('SIM-TX-'))
+        self.assertIsNotNone(self.booking.paid_at)
+
+    def test_simulation_process_failure(self):
+        """Simulation process handles failed payment attempt and marks status as failed."""
+        url = reverse('payments:simulation_process', kwargs={'booking_id': self.booking.id})
+        response = self.client.post(url, data={
+            'action': 'fail',
+            'payment_method': 'mtn_momo',
+            'phone': '677112233',
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('bookings:confirmation', kwargs={'reference': self.booking.reference}))
+
+        self.booking.refresh_from_db()
+        self.assertEqual(self.booking.payment_status, 'failed')
 
     @patch.object(CinetPayService, 'verify_and_update_booking')
     def test_view_cinetpay_notification_ipn_webhook(self, mock_verify):
@@ -178,3 +233,4 @@ class CinetPayPaymentTests(TestCase):
         self.assertEqual(response.status_code, 302)
         expected_url = reverse('bookings:confirmation', kwargs={'reference': self.booking.reference})
         self.assertEqual(response.url, expected_url)
+

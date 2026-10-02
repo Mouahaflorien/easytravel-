@@ -207,3 +207,7 @@ CINETPAY_NOTIFY_URL = os.getenv('CINETPAY_NOTIFY_URL', '')
 CAMPAY_APP_USERNAME = os.getenv('CAMPAY_APP_USERNAME', '')
 CAMPAY_APP_PASSWORD = os.getenv('CAMPAY_APP_PASSWORD', '')
 CAMPAY_ENVIRONMENT = os.getenv('CAMPAY_ENVIRONMENT', 'sandbox')
+
+# Payment Simulation & Sandbox Mode (True by default for tests & demo)
+PAYMENT_SIMULATION_MODE = os.getenv('PAYMENT_SIMULATION_MODE', 'True').lower() in ('true', '1', 't')
+

@@ -4,6 +4,7 @@ Handles payment initiation, CinetPay IPN webhook notification, and customer retu
 """
 
 import json
+import uuid
 import logging
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -12,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.conf import settings
+from django.utils import timezone
 
 from bookings.models import Booking
 from .services.cinetpay import CinetPayService
@@ -21,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 def initiate_booking_payment(request, booking_id):
     """
-    Initiates online payment with CinetPay (Orange Money, MTN MoMo, Carte Bancaire)
-    and redirects user to the CinetPay hosted checkout page.
+    Initiates payment for a booking.
+    If simulation mode is active or CinetPay is unconfigured, directs user to the Interactive Sandbox Checkout.
+    Otherwise, initializes payment with CinetPay v2 and redirects to live checkout.
     """
     booking = get_object_or_404(Booking, id=booking_id)
 
@@ -31,21 +34,19 @@ def initiate_booking_payment(request, booking_id):
         messages.info(request, "Cette réservation a déjà été entièrement réglée.")
         return redirect('bookings:confirmation', reference=booking.reference)
 
-    # Build callback URLs
+    simulation_mode = getattr(settings, 'PAYMENT_SIMULATION_MODE', True)
+    service = CinetPayService()
+
+    # Redirection vers le mode Simulation / Sandbox
+    if simulation_mode or not service.is_configured():
+        return redirect('payments:simulation_checkout', booking_id=booking.id)
+
+    # Mode CinetPay Réel (Live)
     return_url = getattr(settings, 'CINETPAY_RETURN_URL', '') or request.build_absolute_uri(reverse('payments:return'))
     notify_url = getattr(settings, 'CINETPAY_NOTIFY_URL', '') or request.build_absolute_uri(reverse('payments:notification'))
 
     # Store transaction context in session for return fallback
     request.session['last_payment_booking_ref'] = booking.reference
-
-    service = CinetPayService()
-    if not service.is_configured():
-        messages.warning(
-            request, 
-            "Le service de paiement en ligne CinetPay est en cours de configuration. "
-            "Vous pourrez effectuer votre règlement au guichet de l'agence."
-        )
-        return redirect('bookings:confirmation', reference=booking.reference)
 
     success, result, tx_id = service.initiate_payment(
         booking=booking,
@@ -60,6 +61,90 @@ def initiate_booking_payment(request, booking_id):
         error_msg = result.get('message', "Une erreur est survenue lors de l'initialisation du paiement.")
         messages.error(request, f"Paiement en ligne indisponible : {error_msg}")
         return redirect('bookings:confirmation', reference=booking.reference)
+
+
+def simulation_checkout(request, booking_id):
+    """
+    Renders the EasyTravel Interactive Simulation / Sandbox Payment Checkout page.
+    Allows testing Orange Money, MTN MoMo, and Card transactions in a realistic sandbox environment.
+    """
+    booking = get_object_or_404(
+        Booking.objects.select_related(
+            'departure', 'departure__agency', 'departure__vehicle',
+            'departure_stop__city', 'arrival_stop__city', 'user'
+        ),
+        id=booking_id
+    )
+
+    if booking.payment_status == 'paid':
+        messages.info(request, "Cette réservation a déjà été entièrement réglée.")
+        return redirect('bookings:confirmation', reference=booking.reference)
+
+    start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+    end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+
+    return render(request, 'payments/checkout_simulation.html', {
+        'booking': booking,
+        'departure': booking.departure,
+        'agency': booking.departure.agency,
+        'start_city': start_city,
+        'end_city': end_city,
+        'default_phone': booking.traveler_phone or '699000000',
+    })
+
+
+@require_POST
+def simulation_process(request, booking_id):
+    """
+    Processes simulated payments (either successful or failed) for testing.
+    Updates booking status, generates transaction ID and sends confirmation email.
+    """
+    booking = get_object_or_404(Booking, id=booking_id)
+
+    action = request.POST.get('action', 'success')
+    payment_method = request.POST.get('payment_method', 'mtn_momo')
+    phone = request.POST.get('phone', booking.traveler_phone)
+
+    operator_labels = {
+        'mtn_momo': 'MTN Mobile Money',
+        'orange_money': 'Orange Money Cameroun',
+        'card': 'Carte Bancaire (Visa/Mastercard)',
+    }
+    operator_name = operator_labels.get(payment_method, 'Mobile Money')
+
+    if action == 'success':
+        tx_id = f"SIM-TX-{booking.id}-{uuid.uuid4().hex[:8].upper()}"
+        booking.payment_status = 'paid'
+        booking.payment_method = payment_method
+        booking.payment_operator = f"{operator_name} (Simulation)"
+        booking.transaction_id = tx_id
+        booking.status = 'confirmed'
+        booking.paid_at = timezone.now()
+        booking.save()
+
+        # Send ticket confirmation email
+        try:
+            from accounts.services.email_service import send_ticket_confirmation_email
+            send_ticket_confirmation_email(request, booking)
+        except Exception as e:
+            logger.warning(f"Could not send ticket confirmation email: {e}")
+
+        messages.success(
+            request, 
+            f"🎉 Paiement simulé de {int(booking.total_amount):,} FCFA validé avec succès via {operator_name} ! "
+            f"Votre titre de transport avec QR Code officiel est disponible ci-dessous."
+        )
+        return redirect('bookings:confirmation', reference=booking.reference)
+
+    else:
+        booking.payment_status = 'failed'
+        booking.save(update_fields=['payment_status'])
+        messages.error(
+            request,
+            f"❌ Simulation : La transaction via {operator_name} a été refusée ou interrompue (Solde insuffisant / Annulation USSD). Vous pouvez retenter le règlement."
+        )
+        return redirect('bookings:confirmation', reference=booking.reference)
+
 
 
 @csrf_exempt

@@ -90,3 +90,52 @@ def verify_activation_token(uidb64, token):
     if user and default_token_generator.check_token(user, token):
         return user
     return None
+
+
+def send_ticket_confirmation_email(request, booking):
+    """
+    Envoie un email de confirmation de paiement et délivrance de billet officiel au voyageur.
+    """
+    recipient_email = booking.traveler_email or (booking.user.email if booking.user else None)
+    if not recipient_email:
+        logger.info(f"Aucune adresse email trouvée pour la réservation {booking.reference}, email non envoyé.")
+        return False
+
+    try:
+        relative_path = reverse('bookings:confirmation', kwargs={'reference': booking.reference})
+        if request:
+            ticket_url = request.build_absolute_uri(relative_path)
+        else:
+            base_url = getattr(settings, 'SITE_URL', 'https://easytravel.mslogitech.com').rstrip('/')
+            ticket_url = f"{base_url}{relative_path}"
+
+        start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+        end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+
+        context = {
+            'booking': booking,
+            'ticket_url': ticket_url,
+            'start_city': start_city,
+            'end_city': end_city,
+            'support_email': getattr(settings, 'SUPPORT_EMAIL', 'support@easytravel.mslogitech.com'),
+        }
+
+        subject = f"[EasyTravel] Billet Confirmé & Payé : {start_city} → {end_city} (Réf: {booking.reference})"
+        html_message = render_to_string('accounts/emails/ticket_paid_email.html', context)
+        text_message = render_to_string('accounts/emails/ticket_paid_email.txt', context)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
+
+        send_mail(
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=[recipient_email],
+            html_message=html_message,
+            fail_silently=True
+        )
+        logger.info(f"Email de confirmation de billet envoyé à {recipient_email} pour la réservation {booking.reference}.")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'email de confirmation du billet {booking.reference} à {recipient_email}: {e}", exc_info=True)
+        return False
+

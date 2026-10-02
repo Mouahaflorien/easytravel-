@@ -1,0 +1,20 @@
+Bonjour {{ booking.traveler_name }},
+
+Votre paiement a bien été validé et votre titre de transport EasyTravel est confirmé !
+
+RÉCAPITULATIF DU BILLET :
+- Référence : {{ booking.reference }}
+- Compagnie : {{ booking.departure.agency.name }}
+- Trajet : {{ start_city }} -> {{ end_city }}
+- Date : {{ booking.departure.date|date:"d/m/Y" }} à {{ booking.departure.time|time:"H:i" }}
+- Places : {{ booking.seats_reserved }}
+- Montant réglé : {{ booking.total_amount }} FCFA
+- Transaction : {{ booking.transaction_id }} ({{ booking.payment_operator|default:booking.get_payment_method_display }})
+
+Pour consulter ou imprimer votre e-billet avec QR Code d'embarquement :
+{{ ticket_url }}
+
+Veuillez vous présenter à l'agence au moins 30 minutes avant l'heure de départ muni d'une pièce d'identité en cours de validité.
+
+Merci d'avoir choisi EasyTravel !
+Support : {{ support_email }}

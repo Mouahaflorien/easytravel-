@@ -1,0 +1,483 @@
+{% extends 'travel/base.html' %}
+{% load agency_extras %}
+
+{% block title %}Paiement Sécurisé (Mode Simulation) - {{ booking.reference }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkout-card {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+    }
+    
+    .sandbox-banner {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #fcd34d;
+        color: #92400e;
+        border-radius: 14px;
+        padding: 14px 18px;
+        font-size: 0.92rem;
+    }
+
+    .payment-option-card {
+        border: 2px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        background: #ffffff;
+    }
+
+    .payment-option-card:hover {
+        border-color: #93c5fd;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.04);
+    }
+
+    .payment-option-card.selected {
+        border-color: #2563eb;
+        background: #f0f7ff;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .payment-option-card.selected::after {
+        content: '✓';
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: #2563eb;
+        color: white;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: bold;
+    }
+
+    .brand-badge-mtn {
+        background: #ffcc00;
+        color: #000000;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+    }
+
+    .brand-badge-orange {
+        background: #ff7900;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+    }
+
+    .brand-badge-card {
+        background: #0f172a;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+    }
+
+    /* Simulation Loading Modal */
+    .sim-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(6px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sim-dialog {
+        background: white;
+        border-radius: 24px;
+        padding: 32px;
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+
+    .sim-step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: #f8fafc;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        color: #64748b;
+        transition: all 0.3s ease;
+    }
+
+    .sim-step.active {
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-weight: 600;
+    }
+
+    .sim-step.done {
+        background: #f0fdf4;
+        color: #15803d;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Breadcrumb & Retour -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'travel:home' %}" class="text-decoration-none">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'bookings:confirmation' booking.reference %}" class="text-decoration-none">{{ booking.reference }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Règlement en ligne</li>
+        </ol>
+    </nav>
+
+    <!-- Sandbox Mode Notification Banner -->
+    <div class="sandbox-banner d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 shadow-xs">
+        <div class="d-flex align-items-center gap-3">
+            <span class="fs-4">🧪</span>
+            <div>
+                <strong>Environnement de Test & Simulation EasyTravel</strong>
+                <div class="small opacity-90">
+                    Ce guichet virtuel vous permet de simuler un débit Mobile Money en conditions réelles sans utiliser d'argent réel.
+                </div>
+            </div>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark px-3 py-1.5 fw-bold rounded-pill text-uppercase">Sandbox Active</span>
+        </div>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+        <!-- Colonne Gauche : Choix du Moyen de Paiement et Validation -->
+        <div class="col-lg-7">
+            <div class="checkout-card p-4 p-md-5">
+                <div class="d-flex align-items-center justify-content-between mb-4">
+                    <div>
+                        <h4 class="fw-bold mb-1 text-dark">Règlement du Billet</h4>
+                        <p class="text-muted small mb-0">Choisissez votre opérateur de paiement camerounais</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="text-muted small d-block">Montant total</span>
+                        <span class="fs-4 fw-bold text-primary font-monospace">{{ booking.total_amount|format_money }} FCFA</span>
+                    </div>
+                </div>
+
+                <form id="paymentForm" method="post" action="{% url 'payments:simulation_process' booking.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" id="actionField" value="success">
+                    <input type="hidden" name="payment_method" id="paymentMethodField" value="mtn_momo">
+
+                    <!-- Options de Paiement -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-uppercase text-secondary mb-3" style="letter-spacing: 0.5px;">
+                            Moyens de Paiement Disponibles
+                        </label>
+                        
+                        <div class="d-flex flex-column gap-3">
+                            <!-- 1. MTN Mobile Money -->
+                            <div class="payment-option-card selected" data-method="mtn_momo" onclick="selectPaymentMethod('mtn_momo', this)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: #ffcc00; width: 44px; height: 44px;">
+                                            <span class="fw-bold text-dark fs-6 font-monospace">MoMo</span>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">MTN Mobile Money Cameroun</h6>
+                                            <small class="text-muted">Débit instantané via push USSD (*126#)</small>
+                                        </div>
+                                    </div>
+                                    <span class="brand-badge-mtn">MTN MoMo</span>
+                                </div>
+                            </div>
+
+                            <!-- 2. Orange Money -->
+                            <div class="payment-option-card" data-method="orange_money" onclick="selectPaymentMethod('orange_money', this)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: #ff7900; width: 44px; height: 44px;">
+                                            <span class="fw-bold text-white fs-6 font-monospace">OM</span>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">Orange Money Cameroun</h6>
+                                            <small class="text-muted">Autorisation sécurisée (#150#)</small>
+                                        </div>
+                                    </div>
+                                    <span class="brand-badge-orange">Orange Money</span>
+                                </div>
+                            </div>
+
+                            <!-- 3. Carte Bancaire Visa / Mastercard -->
+                            <div class="payment-option-card" data-method="card" onclick="selectPaymentMethod('card', this)">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-3 p-2 d-flex align-items-center justify-content-center" style="background: #0f172a; width: 44px; height: 44px;">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                                <line x1="1" y1="10" x2="23" y2="10"></line>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">Carte Bancaire (Visa / Mastercard)</h6>
+                                            <small class="text-muted">Paiement 3D-Secure national & international</small>
+                                        </div>
+                                    </div>
+                                    <span class="brand-badge-card">CB / Visa</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Champ Téléphone Mobile Money -->
+                    <div id="phoneSection" class="mb-4">
+                        <label class="form-label fw-bold small text-secondary">Numéro de téléphone de débit (Cameroun)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light fw-bold text-muted">+237</span>
+                            <input type="tel" name="phone" id="phoneInput" class="form-control form-control-lg fs-6" value="{{ default_phone }}" placeholder="699000000" required>
+                        </div>
+                        <div class="form-text text-muted">
+                            <span id="phoneHint">Une demande de confirmation USSD sera simulée sur ce numéro.</span>
+                        </div>
+                    </div>
+
+                    <!-- Boutons d'Action -->
+                    <div class="d-flex flex-column gap-2 mt-4">
+                        <button type="button" onclick="startSimulation('success')" class="btn btn-primary btn-lg rounded-pill fw-bold py-3 shadow-sm d-flex align-items-center justify-content-center gap-2" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            <span>Valider le Paiement Simulé ({{ booking.total_amount|format_money }} FCFA)</span>
+                        </button>
+
+                        <div class="d-flex gap-2">
+                            <button type="button" onclick="startSimulation('fail')" class="btn btn-outline-danger rounded-pill fw-semibold py-2 w-50 d-inline-flex align-items-center justify-content-center gap-1.5" title="Tester le comportement en cas de solde insuffisant ou rejet">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="15" y1="9" x2="9" y2="15"></line>
+                                    <line x1="9" y1="9" x2="15" y2="15"></line>
+                                </svg>
+                                <span>Simuler Échec / Refus</span>
+                            </button>
+
+                            <a href="{% url 'bookings:confirmation' booking.reference %}" class="btn btn-outline-secondary rounded-pill fw-semibold py-2 w-50 d-inline-flex align-items-center justify-content-center gap-1.5">
+                                <span>Annuler / Retour</span>
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Colonne Droite : Récapitulatif du Voyage & Sécurité -->
+        <div class="col-lg-5">
+            <div class="checkout-card p-4 p-md-4 mb-4">
+                <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                        <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                        <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
+                    <span>Détails de la Réservation</span>
+                </h5>
+
+                <div class="bg-light rounded-3 p-3 mb-3 border border-light-subtle">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Référence Unique</span>
+                        <span class="badge bg-dark font-monospace px-2.5 py-1">{{ booking.reference }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Compagnie</span>
+                        <strong class="text-dark">{{ agency.name }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Ligne de Transport</span>
+                        <span class="text-dark fw-medium">{{ booking.departure.line.name }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Tronçon Réservé</span>
+                        <strong class="text-primary">{{ start_city }} → {{ end_city }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Date & Heure</span>
+                        <span class="text-dark fw-medium">{{ departure.date|date:"d M Y" }} à {{ departure.time|time:"H:i" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted small">Voyageur</span>
+                        <span class="text-dark">{{ booking.traveler_name }}</span>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted">Places réservées :</span>
+                        <span class="fw-semibold text-dark">{{ booking.seats_reserved }} place{{ booking.seats_reserved|pluralize }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="text-muted">Prix unitaire :</span>
+                        <span class="text-muted">{{ booking.total_amount|divisibleby:booking.seats_reserved|default:booking.total_amount }} FCFA</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top mt-2">
+                        <strong class="fs-5 text-dark">Net à régler :</strong>
+                        <strong class="fs-4 text-primary font-monospace">{{ booking.total_amount|format_money }} FCFA</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carte Sécurité & Confidentialité -->
+            <div class="card border-0 bg-white p-3 rounded-4 shadow-xs">
+                <div class="d-flex gap-3">
+                    <div class="text-success p-2 rounded-3 bg-success bg-opacity-10 d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">Sécurité des Transactions</h6>
+                        <p class="text-muted small mb-0">
+                            Protocoles de chiffrement SSL 256 bits conformes aux normes bancaires. Dès validation, votre billet officiel avec QR Code cryptographique unique est instantanément généré.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'Animation de Simulation -->
+<div id="simulationOverlay" class="sim-overlay">
+    <div class="sim-dialog">
+        <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Chargement...</span>
+        </div>
+        <h5 class="fw-bold text-dark mb-1" id="simTitle">Traitement en cours...</h5>
+        <p class="text-muted small mb-4" id="simSubtitle">Communication avec la passerelle Mobile Money</p>
+
+        <div class="text-start mb-4">
+            <div class="sim-step" id="step1">
+                <span>📡</span>
+                <span>1. Envoi de la requête de débit USSD...</span>
+            </div>
+            <div class="sim-step" id="step2">
+                <span>🔐</span>
+                <span>2. Confirmation du code PIN Mobile Money...</span>
+            </div>
+            <div class="sim-step" id="step3">
+                <span>🎫</span>
+                <span>3. Émission et signature du billet officiel...</span>
+            </div>
+        </div>
+
+        <div class="progress" style="height: 6px;">
+            <div id="simProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 15%"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function selectPaymentMethod(method, element) {
+        document.querySelectorAll('.payment-option-card').forEach(card => card.classList.remove('selected'));
+        element.classList.add('selected');
+        document.getElementById('paymentMethodField').value = method;
+
+        const phoneSection = document.getElementById('phoneSection');
+        const phoneHint = document.getElementById('phoneHint');
+
+        if (method === 'card') {
+            phoneHint.textContent = "Une autorisation de carte bancaire virtuelle sera simulée avec succès.";
+        } else if (method === 'orange_money') {
+            phoneHint.textContent = "Une invite Orange Money (#150#) sera simulée sur ce numéro.";
+        } else {
+            phoneHint.textContent = "Une invite MTN Mobile Money (*126#) sera simulée sur ce numéro.";
+        }
+    }
+
+    function startSimulation(action) {
+        document.getElementById('actionField').value = action;
+        const overlay = document.getElementById('simulationOverlay');
+        const title = document.getElementById('simTitle');
+        const subtitle = document.getElementById('simSubtitle');
+        const bar = document.getElementById('simProgressBar');
+        const step1 = document.getElementById('step1');
+        const step2 = document.getElementById('step2');
+        const step3 = document.getElementById('step3');
+
+        overlay.style.display = 'flex';
+
+        if (action === 'fail') {
+            title.textContent = "Simulation d'échec...";
+            subtitle.textContent = "Test d'un solde insuffisant ou rejet...";
+            step1.classList.add('active');
+            bar.style.width = '40%';
+
+            setTimeout(() => {
+                step1.classList.remove('active');
+                step2.classList.add('active');
+                step2.innerHTML = "<span>❌</span><span>2. Solde insuffisant / Transaction rejetée</span>";
+                step2.style.background = "#fee2e2";
+                step2.style.color = "#b91c1c";
+                bar.classList.remove('bg-primary');
+                bar.classList.add('bg-danger');
+                bar.style.width = '80%';
+                
+                setTimeout(() => {
+                    document.getElementById('paymentForm').submit();
+                }, 800);
+            }, 900);
+            return;
+        }
+
+        // Mode Succès
+        step1.classList.add('active');
+        bar.style.width = '35%';
+
+        setTimeout(() => {
+            step1.classList.remove('active');
+            step1.classList.add('done');
+            step1.innerHTML = "<span>✓</span><span>1. Requête USSD transmise avec succès</span>";
+            step2.classList.add('active');
+            bar.style.width = '70%';
+
+            setTimeout(() => {
+                step2.classList.remove('active');
+                step2.classList.add('done');
+                step2.innerHTML = "<span>✓</span><span>2. Débit validé par l'opérateur</span>";
+                step3.classList.add('active');
+                bar.style.width = '95%';
+
+                setTimeout(() => {
+                    step3.classList.remove('active');
+                    step3.classList.add('done');
+                    step3.innerHTML = "<span>✓</span><span>3. Billet EasyTravel émis et signé</span>";
+                    bar.style.width = '100%';
+                    bar.classList.remove('bg-primary');
+                    bar.classList.add('bg-success');
+
+                    setTimeout(() => {
+                        document.getElementById('paymentForm').submit();
+                    }, 500);
+                }, 700);
+            }, 800);
+        }, 800);
+    }
+</script>
+{% endblock %}
