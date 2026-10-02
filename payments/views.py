@@ -29,6 +29,11 @@ def initiate_booking_payment(request, booking_id):
     """
     booking = get_object_or_404(Booking, id=booking_id)
 
+    # Vérification IDOR : Seul le propriétaire peut payer
+    if booking.user and booking.user != request.user:
+        messages.error(request, "Accès non autorisé à cette transaction.")
+        return redirect('travel:home')
+
     # If already paid, take directly to confirmed ticket
     if booking.payment_status == 'paid':
         messages.info(request, "Cette réservation a déjà été entièrement réglée.")
@@ -75,6 +80,11 @@ def simulation_checkout(request, booking_id):
         ),
         id=booking_id
     )
+
+    # Vérification IDOR
+    if booking.user and booking.user != request.user:
+        messages.error(request, "Accès non autorisé à cette transaction.")
+        return redirect('travel:home')
 
     if booking.payment_status == 'paid':
         messages.info(request, "Cette réservation a déjà été entièrement réglée.")

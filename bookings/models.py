@@ -67,3 +67,26 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Réservation {self.reference} - {self.traveler_name}"
+
+    @classmethod
+    def cancel_expired_pending_bookings(cls):
+        from django.utils import timezone
+        from datetime import timedelta
+        # On annule les réservations qui sont restées 'pending' plus de 15 minutes
+        expiration_time = timezone.now() - timedelta(minutes=15)
+        
+        expired_bookings = cls.objects.filter(
+            status__in=['pending', 'confirmed'],
+            payment_status='pending',
+            created_at__lt=expiration_time
+        ).select_related('departure')
+        
+        for booking in expired_bookings:
+            booking.status = 'cancelled'
+            booking.payment_status = 'failed'
+            # Libérer les sièges bloqués
+            if booking.departure:
+                booking.departure.available_capacity += booking.seats_reserved
+                booking.departure.save(update_fields=['available_capacity'])
+            booking.save(update_fields=['status', 'payment_status'])
+

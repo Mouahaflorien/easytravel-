@@ -12,6 +12,10 @@ from accounts.validators import (
 )
 from accounts.services.email_service import send_account_activation_email
 from .models import Booking
+import qrcode
+import base64
+from io import BytesIO
+from django.contrib import messages
 
 
 def book_departure(request, departure_id):
@@ -21,6 +25,9 @@ def book_departure(request, departure_id):
     - Si l'utilisateur n'a pas de compte : création du compte en attente (is_active=False) 
       et envoi immédiat d'un lien d'activation par email requis pour valider le compte et le billet.
     """
+    # Nettoyage des réservations impayées expirées
+    Booking.cancel_expired_pending_bookings()
+    
     departure = get_object_or_404(
         Departure.objects.select_related('agency', 'line', 'vehicle'), 
         id=departure_id
@@ -226,13 +233,28 @@ def booking_confirmation(request, reference):
         reference=reference
     )
     
+    # Vérification IDOR : Bloquer l'accès aux autres utilisateurs
+    if booking.user and booking.user != request.user:
+        messages.error(request, "Accès non autorisé à cette réservation.")
+        return redirect('travel:home')
+        
     # Données du QR Code pour contrôle / vérification
     verify_url = request.build_absolute_uri()
     start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
     end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
     
     qr_payload = f"REF:{booking.reference}|NOM:{booking.traveler_name}|PIECE:{booking.id_type}-{booking.id_number}|TRAJET:{start_city}-{end_city}|DATE:{booking.departure.date}|PLACES:{booking.seats_reserved}"
-    qr_code_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={quote(qr_payload)}"
+    
+    # Génération LOCALE et sécurisée du QR Code (sans fuite de données)
+    qr = qrcode.QRCode(version=1, box_size=10, border=4)
+    qr.add_data(qr_payload)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    qr_code_url = f"data:image/png;base64,{qr_base64}"
     
     return render(request, 'bookings/confirmation.html', {
         'booking': booking,
