@@ -71,8 +71,8 @@ def search(request):
         except ValueError:
             pass
 
-    # Base des départs planifiés
-    base_qs = Departure.objects.filter(status='scheduled')
+    # Base des départs planifiés et en cours d'embarquement
+    base_qs = Departure.objects.filter(status__in=['scheduled', 'boarding'])
     if matching_line_ids is not None:
         base_qs = base_qs.filter(line_id__in=matching_line_ids)
 
