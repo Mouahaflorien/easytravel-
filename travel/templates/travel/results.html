@@ -105,6 +105,28 @@
         color: #1e40af;
         border-radius: 12px;
     }
+
+    /* Rendu Mobile Fluide des Cartes de Départs & Dates */
+    @media (max-width: 767.98px) {
+        .date-nav-wrapper {
+            padding: 10px 12px !important;
+            border-radius: 14px !important;
+            margin-bottom: 18px !important;
+        }
+        .date-card {
+            min-width: 82px !important;
+            padding: 8px 6px !important;
+            border-radius: 12px !important;
+        }
+        .slider-nav-btn {
+            display: none !important; /* Défilement tactile natif sur mobile */
+        }
+        .border-end, .border-start {
+            border-right: none !important;
+            border-left: none !important;
+            border-bottom: 1px solid #f1f5f9 !important;
+        }
+    }
 </style>
 {% endblock %}
 

@@ -1,0 +1,65 @@
+{
+  "id": "/?source=pwa",
+  "name": "EasyTravel - Réservation de Bus",
+  "short_name": "EasyTravel",
+  "description": "Réservez vos tickets de bus interurbains au Cameroun en toute sérénité.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "categories": ["travel", "transportation", "lifestyle"],
+  "icons": [
+    {
+      "src": "/static/images/pwa/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/pwa/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/images/pwa/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/images/pwa/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Rechercher un trajet",
+      "short_name": "Recherche",
+      "description": "Trouver et réserver un billet de bus",
+      "url": "/recherche/",
+      "icons": [{ "src": "/static/images/pwa/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mes Billets",
+      "short_name": "Mes Billets",
+      "description": "Consulter mes réservations et QR Codes",
+      "url": "/compte/mes-reservations/",
+      "icons": [{ "src": "/static/images/pwa/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Portail Agence",
+      "short_name": "Guichet",
+      "description": "Espace professionnel des compagnies de transport",
+      "url": "/portail-agence/login/",
+      "icons": [{ "src": "/static/images/pwa/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

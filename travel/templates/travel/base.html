@@ -2,30 +2,148 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <title>{% block title %}Réservez vos tickets de bus{% endblock %} - EasyTravel</title>
+    
+    <!-- PWA Web App Manifest & Mobile App Capabilities -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="EasyTravel">
+    <link rel="apple-touch-icon" href="/static/images/pwa/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/pwa/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/pwa/favicon-16x16.png">
+
+    <!-- Fonts & CSS Framework -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
     <style>
-        body { font-family: 'Outfit', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .navbar-custom { background: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(10px); border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .navbar-brand { font-weight: 700; color: #3b82f6 !important; font-size: 1.5rem; letter-spacing: -0.5px; }
-        .nav-link { font-weight: 500; color: #475569 !important; transition: color 0.3s ease; }
-        .nav-link:hover { color: #3b82f6 !important; }
-        .btn-brand { background-color: #3b82f6; border: none; font-weight: 600; padding: 10px 24px; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s; color: white; }
-        .btn-brand:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4); background-color: #2563eb; color: white; }
+        :root {
+            --brand-primary: #2563eb;
+            --brand-primary-hover: #1d4ed8;
+            --brand-dark: #0f172a;
+        }
+
+        html, body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            scroll-behavior: smooth;
+        }
+
+        /* Barre de navigation */
+        .navbar-custom { 
+            background: rgba(255, 255, 255, 0.95) !important; 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(0,0,0,0.06); 
+            transition: all 0.3s ease;
+        }
+        .navbar-brand { 
+            font-weight: 700; 
+            color: var(--brand-primary) !important; 
+            font-size: 1.45rem; 
+            letter-spacing: -0.5px; 
+        }
+        .nav-link { 
+            font-weight: 500; 
+            color: #475569 !important; 
+            transition: all 0.2s ease; 
+        }
+        .nav-link:hover { 
+            color: var(--brand-primary) !important; 
+        }
+        
+        .btn-brand { 
+            background-color: var(--brand-primary); 
+            border: none; 
+            font-weight: 600; 
+            padding: 10px 24px; 
+            border-radius: 9999px; 
+            transition: all 0.2s ease; 
+            color: white; 
+        }
+        .btn-brand:hover, .btn-brand:focus { 
+            transform: translateY(-1px); 
+            box-shadow: 0 8px 20px -4px rgba(37, 99, 235, 0.45); 
+            background-color: var(--brand-primary-hover); 
+            color: white; 
+        }
+
         .footer-link { transition: all 0.2s ease-in-out; }
         .footer-link:hover { color: #ffffff !important; transform: translateX(3px); }
+
+        /* Optimisations Mobiles avancées (Smartphones) */
+        @media (max-width: 991.98px) {
+            .navbar-custom {
+                padding-top: 10px !important;
+                padding-bottom: 10px !important;
+            }
+            .navbar-collapse {
+                background: #ffffff;
+                border-radius: 20px;
+                padding: 18px 20px;
+                margin-top: 12px;
+                box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+                border: 1px solid #e2e8f0;
+            }
+            .navbar-nav {
+                gap: 8px !important;
+            }
+            .navbar-nav .nav-item {
+                width: 100%;
+            }
+            .navbar-nav .nav-link {
+                padding: 10px 14px !important;
+                border-radius: 10px;
+            }
+            .navbar-nav .nav-link:hover, .navbar-nav .nav-link:active {
+                background-color: #f1f5f9;
+            }
+            .navbar-nav .btn-brand {
+                width: 100%;
+                justify-content: center;
+                margin-top: 8px;
+            }
+        }
+
+        /* Bannière d'installation PWA Mobile */
+        .pwa-install-banner {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1080;
+            width: calc(100% - 32px);
+            max-width: 440px;
+            background: #0f172a;
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 14px 18px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: none;
+            animation: slideUpPwa 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUpPwa {
+            from { transform: translate(-50%, 100px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top navbar-custom py-3">
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top navbar-custom py-2 py-lg-3">
         <div class="container">
             <a class="navbar-brand d-inline-flex align-items-center gap-2" href="/">
-                <span class="bg-primary text-white rounded-3 p-1.5 d-inline-flex align-items-center justify-content-center shadow-xs" style="width: 32px; height: 32px;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <span class="bg-primary text-white rounded-3 p-1.5 d-inline-flex align-items-center justify-content-center shadow-xs" style="width: 34px; height: 34px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="4" width="18" height="15" rx="2"></rect>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                         <circle cx="7" cy="15" r="1.5"></circle>
@@ -34,7 +152,7 @@
                 </span>
                 <span>EasyTravel</span>
             </a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0 shadow-none p-1.5" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Menu">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
@@ -53,7 +171,7 @@
                                 <span>Mes Réservations</span>
                             </a>
                         </li>
-                        <li class="nav-item dropdown">
+                        <li class="nav-item dropdown w-100 w-lg-auto">
                             <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 px-2" href="#" role="button" data-bs-toggle="dropdown">
                                 <span class="badge bg-primary bg-opacity-10 text-primary rounded-circle p-1.5 d-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -63,7 +181,7 @@
                                 </span>
                                 <span>{{ user.first_name|default:user.username }}</span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 mt-2">
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 mt-2">
                                 <li>
                                     <a class="dropdown-item py-2 d-flex align-items-center gap-2" href="{% url 'accounts:my_bookings' %}">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
@@ -103,8 +221,8 @@
                             </ul>
                         </li>
                     {% else %}
-                        <li class="nav-item ms-lg-2">
-                            <a class="btn btn-brand btn-sm px-3 rounded-pill fw-semibold d-inline-flex align-items-center gap-1.5" href="{% url 'accounts:login' %}">
+                        <li class="nav-item ms-lg-2 w-100 w-lg-auto">
+                            <a class="btn btn-brand btn-sm px-3 py-2 rounded-pill fw-semibold d-inline-flex align-items-center justify-content-center gap-1.5 w-100" href="{% url 'accounts:login' %}">
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                     <circle cx="12" cy="7" r="4"></circle>
@@ -123,19 +241,41 @@
         {% endblock content %}
     </main>
 
+    <!-- Bannière d'Installation Progressive Web App (PWA) Mobile -->
+    <div id="pwaInstallBanner" class="pwa-install-banner align-items-center justify-content-between gap-3">
+        <div class="d-flex align-items-center gap-2.5">
+            <img src="/static/images/pwa/icon-192x192.png" alt="EasyTravel" width="44" height="44" class="rounded-3 shadow-xs">
+            <div>
+                <div class="fw-bold fs-6" style="line-height: 1.2;">Installer l'Application</div>
+                <small class="text-white-50" style="font-size: 0.75rem;">Accédez à vos billets même hors-connexion</small>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <button id="pwaInstallBtn" class="btn btn-primary btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs">
+                Installer
+            </button>
+            <button id="pwaCloseBtn" class="btn btn-link text-white-50 p-1 text-decoration-none" aria-label="Fermer">
+                ✕
+            </button>
+        </div>
+    </div>
+
     <footer class="bg-dark text-white py-5 mt-5">
         <div class="container text-center text-md-start">
             <div class="row">
                 <div class="col-md-4 mb-4">
-                    <h5 class="fw-bold mb-3">EasyTravel</h5>
+                    <h5 class="fw-bold mb-3 d-flex align-items-center justify-content-center justify-content-md-start gap-2">
+                        <img src="/static/images/pwa/favicon-32x32.png" alt="EasyTravel Logo" width="24" height="24">
+                        <span>EasyTravel</span>
+                    </h5>
                     <p class="text-secondary small">La façon la plus simple et sécurisée de réserver vos trajets en bus à travers tout le pays.</p>
                 </div>
                 <div class="col-md-4 mb-4">
                     <h6 class="fw-bold text-uppercase mb-3">Liens rapides</h6>
                     <ul class="list-unstyled text-secondary small">
-                        <li><a href="#" class="text-secondary text-decoration-none">Destinations populaires</a></li>
-                        <li><a href="#" class="text-secondary text-decoration-none">Conditions Générales</a></li>
-                        <li><a href="#" class="text-secondary text-decoration-none">Aide & Contact</a></li>
+                        <li><a href="/" class="text-secondary text-decoration-none">Rechercher un trajet</a></li>
+                        <li><a href="{% url 'accounts:login' %}" class="text-secondary text-decoration-none">Espace Voyageur</a></li>
+                        <li><a href="{% url 'pwa_offline' %}" class="text-secondary text-decoration-none">Mode Hors-Ligne (PWA)</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 mb-4">
@@ -147,35 +287,90 @@
                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="4" y="2" width="16" height="20" rx="2"></rect>
                                     <path d="M9 22v-4h6v4"></path>
-                                    <path d="M8 6h.01"></path>
-                                    <path d="M16 6h.01"></path>
-                                    <path d="M8 10h.01"></path>
-                                    <path d="M16 10h.01"></path>
                                 </svg>
                                 <span>Portail Partenaire / Espace Agence</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="tel:+237600000000" class="footer-link text-secondary text-decoration-none d-inline-flex align-items-center gap-2">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                </svg>
-                                <span>Rejoindre le réseau de transport</span>
                             </a>
                         </li>
                     </ul>
                 </div>
             </div>
             <hr class="border-secondary mt-4 mb-3">
-            <div class="text-center text-secondary small">
-                © {% now "Y" %} EasyTravel. Tous droits réservés.
+            <div class="d-flex flex-wrap justify-content-between align-items-center text-secondary small gap-2">
+                <div>© {% now "Y" %} EasyTravel. Tous droits réservés.</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2.5 py-1">PWA Prête</span>
+                    <span>Application Web Progressive</span>
+                </div>
             </div>
         </div>
     </footer>
 
+    <!-- Bootstrap & Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/fr.js"></script>
+
+    <!-- Enregistrement Service Worker & PWA Install Manager -->
+    <script>
+        // 1. Enregistrement du Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(reg) {
+                        console.log('[EasyTravel PWA] Service Worker actif, scope:', reg.scope);
+                    })
+                    .catch(function(err) {
+                        console.log('[EasyTravel PWA] Erreur enregistrement SW:', err);
+                    });
+            });
+        }
+
+        // 2. Gestion de la bannière d'installation PWA
+        let deferredPrompt;
+        const installBanner = document.getElementById('pwaInstallBanner');
+        const installBtn = document.getElementById('pwaInstallBtn');
+        const closeBtn = document.getElementById('pwaCloseBtn');
+
+        // Ne pas réafficher si déjà fermé dans les dernières 24h
+        const bannerDismissedTime = localStorage.getItem('easytravel_pwa_dismissed');
+        const isDismissedRecently = bannerDismissedTime && (Date.now() - parseInt(bannerDismissedTime, 10) < 86400000);
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Empêche l'affichage automatique natif du navigateur
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Afficher notre bannière personnalisée fluide sur mobile si non fermée récemment
+            if (!isDismissedRecently && installBanner) {
+                installBanner.style.display = 'flex';
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`[EasyTravel PWA] Réponse utilisateur: ${outcome}`);
+                    deferredPrompt = null;
+                    if (installBanner) installBanner.style.display = 'none';
+                }
+            });
+        }
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                if (installBanner) installBanner.style.display = 'none';
+                localStorage.setItem('easytravel_pwa_dismissed', Date.now().toString());
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('[EasyTravel PWA] Application installée avec succès sur l\'appareil !');
+            if (installBanner) installBanner.style.display = 'none';
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>
