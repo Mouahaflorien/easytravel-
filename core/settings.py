@@ -29,9 +29,31 @@ ALLOWED_HOSTS = [h.strip() for h in hosts_env.split(',') if h.strip()]
 if DEBUG and '*' not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.extend(['127.0.0.1', 'localhost', 'testserver'])
 
+# Configuration Reverse Proxy Nginx & SSL HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 # Domaines CSRF autorisés pour soumission de formulaires en HTTPS
-csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://127.0.0.1:8000,http://localhost:8000')
+csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in csrf_env.split(',') if o.strip()]
+default_csrf = [
+    'https://easytravel.mslogitech.com',
+    'http://easytravel.mslogitech.com',
+    'https://*.mslogitech.com',
+    'http://169.58.52.142',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+]
+for origin in default_csrf:
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Application definition
 INSTALLED_APPS = [
