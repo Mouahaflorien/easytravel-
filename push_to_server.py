@@ -2,16 +2,23 @@ import os
 import tarfile
 import paramiko
 import sys
-import shutil
+from dotenv import load_dotenv
+
+# Charger les variables d'environnement depuis le fichier .env
+load_dotenv()
 
 # Assurez-vous que l'affichage console supporte les caractères spéciaux
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-HOST = "169.58.52.142"
-USER = "root"
-PWD = "Ax3!u!VkbEm9TS2"
+HOST = os.environ.get("SERVER_IP", "169.58.52.142")
+USER = os.environ.get("SERVER_USER", "root")
+PWD = os.environ.get("SERVER_PASSWORD")
 LOCAL_DIR = r"c:\Users\mouah\Desktop\Ms logitech1+"
+
+if not PWD:
+    print("Erreur : Le mot de passe du serveur (SERVER_PASSWORD) n'est pas défini dans le fichier .env !")
+    sys.exit(1)
 ARCHIVE_PATH = os.path.join(LOCAL_DIR, "easytravel_sync.tar.gz")
 
 def exclude_filter(tarinfo):
