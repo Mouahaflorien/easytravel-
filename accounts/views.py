@@ -24,6 +24,10 @@ def traveler_login(request):
             return redirect(next_url)
         return redirect('accounts:my_bookings')
         
+    # Vérifier si l'utilisateur a été déconnecté car connecté ailleurs
+    if request.session.pop('kicked_out', False):
+        messages.warning(request, "Votre session a été fermée car ce compte s'est connecté depuis un autre appareil.")
+        
     login_error = None
     unactivated_email = None
     

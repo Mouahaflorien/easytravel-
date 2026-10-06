@@ -1,0 +1,16 @@
+Bonjour {{ booking.traveler_name }},
+
+La compagnie {{ booking.departure.agency.name }} vous rappelle que votre voyage approche à grands pas !
+
+Référence : {{ booking.reference }}
+Trajet : {{ start_city }} -> {{ end_city }}
+Date de Départ : {{ booking.departure.date|date:"l d F Y" }}
+Heure de Départ : {{ booking.departure.time|time:"H:i" }}
+
+⚠️ Consignes importantes :
+- Veuillez vous présenter au quai d'embarquement au moins 30 minutes avant l'heure prévue.
+- N'oubliez pas l'original de votre pièce d'identité ({{ booking.get_id_type_display }} N° {{ booking.id_number }}).
+
+Bon voyage !
+
+© EasyTravel Cameroun

@@ -180,6 +180,9 @@
                         </div>
                     </div>
 
+                    <!-- Conteneur pour les passagers additionnels -->
+                    <div id="additionalPassengersContainer"></div>
+
                     {% if not user.is_authenticated %}
                     <!-- 4bis. Création de compte voyageur (Requis pour authentification du billet) -->
                     <div class="mb-4 p-3 bg-light rounded-3 border">
@@ -573,4 +576,51 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const seatsInput = document.getElementById('seatsInput');
+        const container = document.getElementById('additionalPassengersContainer');
+
+        function updateAdditionalPassengers() {
+            let seats = parseInt(seatsInput.value) || 1;
+            if (seats > parseInt(seatsInput.max)) seats = parseInt(seatsInput.max);
+            if (seats < 1) seats = 1;
+
+            container.innerHTML = '';
+            
+            for (let i = 2; i <= seats; i++) {
+                const html = `
+                    <div class="mb-4 p-3 bg-light rounded-3 border">
+                        <h6 class="fw-bold mb-3 text-primary">👤 Passager ${i} (Accompagnant)</h6>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Nom Complet <span class="text-danger">*</span></label>
+                            <input type="text" name="traveler_name_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="Nom sur la pièce d'identité" required>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-5">
+                                <label class="form-label fw-bold small text-dark mb-1">Type de Pièce <span class="text-danger">*</span></label>
+                                <select name="id_type_${i}" class="form-select py-2 rounded-3 bg-white" required>
+                                    <option value="CNI" selected>CNI</option>
+                                    <option value="PASSPORT">Passeport</option>
+                                    <option value="RECEIPT">Récépissé</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-7">
+                                <label class="form-label fw-bold small text-dark mb-1">Numéro de la Pièce <span class="text-danger">*</span></label>
+                                <input type="text" name="id_number_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="N° complet" required>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+            }
+        }
+
+        seatsInput.addEventListener('change', updateAdditionalPassengers);
+        seatsInput.addEventListener('keyup', updateAdditionalPassengers);
+        updateAdditionalPassengers(); // Init
+    });
+</script>
 {% endblock %}

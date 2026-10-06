@@ -19,6 +19,29 @@
         </a>
     </div>
 
+    <!-- Section Portefeuille (Wallet) -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+        <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="bg-white bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                        <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                </div>
+                <div>
+                    <span class="d-block text-white-50 text-uppercase small fw-bold" style="letter-spacing: 0.5px;">Mon Portefeuille EasyTravel</span>
+                    <h3 class="fw-bold mb-0 mt-1">{{ request.user.wallet_balance|default:0|format_money }} FCFA</h3>
+                </div>
+            </div>
+            {% if request.user.wallet_balance > 0 %}
+                <div class="text-white-50 small text-md-end" style="max-width: 300px;">
+                    Ce solde provient d'annulations ou de remboursements.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
     {% if bookings %}
     <div class="row g-4">
         {% for b in bookings %}
@@ -109,13 +132,23 @@
 
                     <div class="d-flex flex-column gap-2">
                         {% if b.payment_status != 'paid' and b.status != 'cancelled' %}
-                        <a href="{% url 'payments:initiate' b.id %}" class="btn btn-primary rounded-pill w-100 fw-bold py-2 d-inline-flex align-items-center justify-content-center gap-2 shadow-xs text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
-                                <line x1="1" y1="10" x2="23" y2="10"></line>
-                            </svg>
-                            <span>Payer maintenant ({{ b.total_amount|format_money }} FCFA)</span>
-                        </a>
+                        {% if b.cart %}
+                            <a href="{% url 'payments:initiate_cart' b.cart.id %}" class="btn btn-primary rounded-pill w-100 fw-bold py-2 d-inline-flex align-items-center justify-content-center gap-2 shadow-xs text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                                </svg>
+                                <span>Payer le panier ({{ b.cart.total_amount|format_money }} FCFA)</span>
+                            </a>
+                        {% else %}
+                            <a href="{% url 'payments:initiate' b.id %}" class="btn btn-primary rounded-pill w-100 fw-bold py-2 d-inline-flex align-items-center justify-content-center gap-2 shadow-xs text-white" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                                    <line x1="1" y1="10" x2="23" y2="10"></line>
+                                </svg>
+                                <span>Payer maintenant ({{ b.total_amount|format_money }} FCFA)</span>
+                            </a>
+                        {% endif %}
                         <a href="{% url 'bookings:confirmation' b.reference %}" class="btn btn-outline-secondary rounded-pill w-100 fw-semibold py-1.5 d-inline-flex align-items-center justify-content-center gap-1.5 small">
                             <span>Voir le récapitulatif</span>
                         </a>

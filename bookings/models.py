@@ -3,6 +3,19 @@ from django.db import models
 from django.conf import settings
 from travel.models import Departure, LineStop
 
+class BookingCart(models.Model):
+    reference = models.CharField(max_length=15, unique=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='carts')
+    created_at = models.DateTimeField(auto_now_add=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_status = models.CharField(max_length=20, default='pending')
+    transaction_id = models.CharField(max_length=100, blank=True, default="")
+    
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = f"CRT-{uuid.uuid4().hex[:6].upper()}"
+        super().save(*args, **kwargs)
+
 class Booking(models.Model):
     STATUS_CHOICES = (
         ('pending', 'En attente'),
@@ -30,6 +43,7 @@ class Booking(models.Model):
         ('online', 'Paiement en ligne'),
     )
     
+    cart = models.ForeignKey(BookingCart, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
     reference = models.CharField(max_length=15, unique=True, blank=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='bookings')
     departure = models.ForeignKey(Departure, on_delete=models.CASCADE, related_name='bookings')
@@ -47,7 +61,12 @@ class Booking(models.Model):
     
     # Détails Réservation & Encaissement
     seats_reserved = models.PositiveIntegerField(default=1)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Séparation Financière
+    agency_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Montant reversé à l'agence")
+    platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Frais de service EasyTravel")
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Montant total payé par le client (Agence + Frais)")
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='confirmed')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='paid', verbose_name="Statut du paiement")
     payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='cash', verbose_name="Mode d'encaissement")
@@ -90,3 +109,16 @@ class Booking(models.Model):
                 booking.departure.save(update_fields=['available_capacity'])
             booking.save(update_fields=['status', 'payment_status'])
 
+class BookingFeedback(models.Model):
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='feedback')
+    rating = models.PositiveIntegerField(choices=[(i, str(i)) for i in range(1, 6)], help_text="Note sur 5")
+    comment = models.TextField(blank=True, help_text="Commentaire du client")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Sondage de satisfaction"
+        verbose_name_plural = "Sondages de satisfaction"
+
+    def __str__(self):
+        return f"Sondage pour {self.booking.reference} - {self.rating}/5"

@@ -69,6 +69,7 @@ class Agency(models.Model):
     timezone = models.CharField(max_length=50, default='Africa/Douala')
     booking_cutoff_minutes = models.PositiveIntegerField(default=30, help_text="Clôture des ventes en ligne (minutes avant départ)")
     cancellation_deadline_hours = models.PositiveIntegerField(default=2, help_text="Délai maximum d'annulation (heures avant départ)")
+    platform_fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=3.00, help_text="Frais de plateforme EasyTravel (%)")
 
     # 5. Matériel et Périphériques
     printer_format = models.CharField(max_length=20, choices=PRINTER_CHOICES, default='a4')

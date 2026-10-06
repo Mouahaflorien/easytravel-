@@ -3,7 +3,7 @@ from django.db import models
 from agencies.models import Agency
 
 class City(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     region = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     

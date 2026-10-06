@@ -112,30 +112,212 @@ def send_ticket_confirmation_email(request, booking):
         start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
         end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
 
+        import hmac, hashlib, qrcode, base64
+        from io import BytesIO
+        from xhtml2pdf import pisa
+        from django.core.mail import EmailMultiAlternatives
+        
+        # Générer QR Code
+        raw_payload = f"REF:{booking.reference}|NOM:{booking.traveler_name}|PIECE:{booking.id_type}-{booking.id_number}|TRAJET:{start_city}-{end_city}|DATE:{booking.departure.date}|PLACES:{booking.seats_reserved}"
+        signature = hmac.new(settings.SECRET_KEY.encode(), raw_payload.encode(), hashlib.sha256).hexdigest()[:12]
+        qr_payload = f"{raw_payload}|SIG:{signature}"
+        qr = qrcode.QRCode(version=1, box_size=10, border=4)
+        qr.add_data(qr_payload)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        qr_buffer = BytesIO()
+        img.save(qr_buffer, format="PNG")
+        qr_base64 = base64.b64encode(qr_buffer.getvalue()).decode("utf-8")
+        qr_code_url = f"data:image/png;base64,{qr_base64}"
+
         context = {
             'booking': booking,
             'ticket_url': ticket_url,
             'start_city': start_city,
             'end_city': end_city,
+            'qr_code_url': qr_code_url,
             'support_email': getattr(settings, 'SUPPORT_EMAIL', 'support@easytravel.mslogitech.com'),
         }
+        
+        # 1. Générer le PDF
+        pdf_html = render_to_string('bookings/pdf_ticket.html', context)
+        pdf_result = BytesIO()
+        pisa_status = pisa.CreatePDF(BytesIO(pdf_html.encode('UTF-8')), dest=pdf_result)
 
         subject = f"[EasyTravel] Billet Confirmé & Payé : {start_city} → {end_city} (Réf: {booking.reference})"
         html_message = render_to_string('accounts/emails/ticket_paid_email.html', context)
         text_message = render_to_string('accounts/emails/ticket_paid_email.txt', context)
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
 
-        send_mail(
+        email = EmailMultiAlternatives(
             subject=subject,
-            message=text_message,
+            body=text_message,
             from_email=from_email,
-            recipient_list=[recipient_email],
-            html_message=html_message,
-            fail_silently=True
+            to=[recipient_email]
         )
+        email.attach_alternative(html_message, "text/html")
+        
+        # 2. Attacher le PDF s'il a bien été généré
+        if not pisa_status.err:
+            email.attach(f"Billet_{booking.reference}.pdf", pdf_result.getvalue(), "application/pdf")
+            
+        email.send(fail_silently=True)
+
         logger.info(f"Email de confirmation de billet envoyé à {recipient_email} pour la réservation {booking.reference}.")
         return True
     except Exception as e:
         logger.error(f"Erreur lors de l'envoi de l'email de confirmation du billet {booking.reference} à {recipient_email}: {e}", exc_info=True)
+        return False
+
+def send_trip_reminder_email(booking):
+    """Envoie un email de rappel de voyage au passager"""
+    if not booking.traveler_email:
+        return False
+        
+    try:
+        start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+        end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+
+        context = {
+            'booking': booking,
+            'start_city': start_city,
+            'end_city': end_city,
+        }
+
+        subject = f"[Rappel] Votre voyage vers {end_city} avec {booking.departure.agency.name}"
+        html_message = render_to_string('accounts/emails/trip_reminder_email.html', context)
+        text_message = render_to_string('accounts/emails/trip_reminder_email.txt', context)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
+
+        send_mail(
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=[booking.traveler_email],
+            html_message=html_message,
+            fail_silently=True
+        )
+        logger.info(f"Email de rappel envoyé à {booking.traveler_email} pour la réservation {booking.reference}.")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du rappel pour le billet {booking.reference} à {booking.traveler_email}: {e}", exc_info=True)
+        return False
+
+def send_satisfaction_survey_email(request, booking):
+    """Envoie un email de sondage de satisfaction après un voyage"""
+    if not booking.traveler_email:
+        return False
+        
+    try:
+        start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+        end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+        
+        # S'il y a un 'request', on génère depuis le site, sinon depuis le CRON on prend la var SITE_URL
+        from django.urls import reverse
+        if request:
+            survey_url = request.build_absolute_uri(reverse('bookings:feedback', kwargs={'reference': booking.reference}))
+        else:
+            site_url = getattr(settings, 'SITE_URL', 'https://easytravel.mslogitech.com')
+            survey_url = f"{site_url}{reverse('bookings:feedback', kwargs={'reference': booking.reference})}"
+
+        context = {
+            'booking': booking,
+            'start_city': start_city,
+            'end_city': end_city,
+            'survey_url': survey_url,
+        }
+
+        subject = f"Comment s'est passé votre voyage vers {end_city} avec {booking.departure.agency.name} ?"
+        html_message = render_to_string('accounts/emails/satisfaction_survey_email.html', context)
+        text_message = render_to_string('accounts/emails/satisfaction_survey_email.txt', context)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
+
+        send_mail(
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=[booking.traveler_email],
+            html_message=html_message,
+            fail_silently=True
+        )
+        logger.info(f"Sondage de satisfaction envoyé à {booking.traveler_email} pour la réservation {booking.reference}.")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi du sondage pour le billet {booking.reference} à {booking.traveler_email}: {e}", exc_info=True)
+        return False
+
+
+def send_missed_trip_email(booking):
+    """Envoie un email de rattrapage à un client qui a manqué son bus (non scanné)"""
+    if not booking.traveler_email:
+        return False
+        
+    try:
+        start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+        end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+        
+        site_url = getattr(settings, 'SITE_URL', 'https://easytravel.mslogitech.com')
+
+        context = {
+            'booking': booking,
+            'start_city': start_city,
+            'end_city': end_city,
+            'site_url': site_url,
+        }
+
+        subject = f"Oups ! Vous avez manqué votre bus avec {booking.departure.agency.name} ?"
+        html_message = render_to_string('accounts/emails/missed_trip_email.html', context)
+        text_message = render_to_string('accounts/emails/missed_trip_email.txt', context)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
+
+        send_mail(
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=[booking.traveler_email],
+            html_message=html_message,
+            fail_silently=True
+        )
+        logger.info(f"Email de voyage manqué envoyé à {booking.traveler_email} pour la réservation {booking.reference}.")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'email de voyage manqué pour le billet {booking.reference} à {booking.traveler_email}: {e}", exc_info=True)
+        return False
+
+def send_cancellation_email(booking):
+    """Envoie un email confirmant l'annulation et le remboursement sur le portefeuille"""
+    if not booking.traveler_email:
+        return False
+        
+    try:
+        start_city = booking.departure_stop.city.name if booking.departure_stop and booking.departure_stop.city else "Départ"
+        end_city = booking.arrival_stop.city.name if booking.arrival_stop and booking.arrival_stop.city else "Arrivée"
+        
+        site_url = getattr(settings, 'SITE_URL', 'https://easytravel.mslogitech.com')
+
+        context = {
+            'booking': booking,
+            'start_city': start_city,
+            'end_city': end_city,
+            'site_url': site_url,
+        }
+
+        subject = f"[EasyTravel] Annulation et Remboursement de votre billet {booking.reference}"
+        html_message = render_to_string('accounts/emails/cancellation_email.html', context)
+        text_message = render_to_string('accounts/emails/cancellation_email.txt', context)
+        from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
+
+        send_mail(
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=[booking.traveler_email],
+            html_message=html_message,
+            fail_silently=True
+        )
+        logger.info(f"Email d'annulation envoyé à {booking.traveler_email} pour la réservation {booking.reference}.")
+        return True
+    except Exception as e:
+        logger.error(f"Erreur lors de l'envoi de l'email d'annulation pour le billet {booking.reference} à {booking.traveler_email}: {e}", exc_info=True)
         return False
 

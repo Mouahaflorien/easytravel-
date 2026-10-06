@@ -1,0 +1,13 @@
+Bonjour {{ booking.traveler_name }},
+
+Sauf erreur de notre part, il semblerait que vous n'ayez pas scanné votre billet à l'embarquement pour votre voyage de {{ start_city }} vers {{ end_city }} avec l'agence {{ booking.departure.agency.name }}.
+
+Avez-vous raté votre bus ou eu un empêchement de dernière minute ?
+Sachez que sur EasyTravel, la flexibilité est reine. 
+
+Vous pouvez à tout moment vous rendre sur notre site pour rechercher de nouvelles disponibilités et réserver un prochain départ pour la même destination.
+
+Nouvelle recherche : {{ site_url }}
+
+À très bientôt,
+L'équipe EasyTravel

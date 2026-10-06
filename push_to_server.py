@@ -61,6 +61,14 @@ chmod -R 755 /var/www/easytravel
 mkdir -p /var/www/easytravel/logs
 chmod -R 775 /var/www/easytravel/media /var/www/easytravel/static /var/www/easytravel/logs || true
 
+echo "Application des migrations de base de données..."
+cd /var/www/easytravel
+source venv/bin/activate
+python manage.py migrate
+
+echo "Collecte des fichiers statiques..."
+python manage.py collectstatic --noinput
+
 echo "Redémarrage de Gunicorn (Django)..."
 systemctl restart easytravel
 

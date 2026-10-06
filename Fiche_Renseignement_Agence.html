@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiche de Renseignement Agence - EasyTravel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8fafc;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-top: 6px solid #2563eb;
+        }
+        h1 {
+            color: #1e293b;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        p.subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #2563eb;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+            margin-top: 35px;
+            font-size: 1.25rem;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #475569;
+        }
+        input[type="text"], input[type="email"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-family: inherit;
+            background-color: #f8fafc;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        .instruction {
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+        }
+        td input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        td input:focus {
+            outline: none;
+            background: #fff;
+        }
+        .footer-note {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        @media print {
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; border-top: none; }
+            input, textarea { border: 1px solid #ccc !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>EasyTravel - Création d'Agence</h1>
+    <p class="subtitle">Fiche de renseignements à remplir électroniquement</p>
+
+    <h2>1. Informations de l'Agence</h2>
+    <div class="form-group">
+        <label>Nom complet de l'Agence :</label>
+        <input type="text" placeholder="Ex: Finex Voyage">
+    </div>
+    <div class="form-group">
+        <label>Téléphone(s) :</label>
+        <input type="text" placeholder="Ex: 699 99 99 99">
+    </div>
+    <div class="form-group">
+        <label>Adresse Email (pour recevoir les rapports) :</label>
+        <input type="email" placeholder="Ex: contact@monagence.com">
+    </div>
+    <div class="form-group">
+        <label>Siège social / Adresse :</label>
+        <input type="text" placeholder="Ex: Akwa, Douala">
+    </div>
+
+    <h2>2. Votre Flotte (Vos Bus)</h2>
+    <p class="instruction">Listez quelques-uns de vos bus principaux pour configurer le système.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Immatriculation (Plaque)</th>
+                <th>Type (VIP, Classique, etc.)</th>
+                <th>Nombre de Places</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+        </tbody>
+    </table>
+
+    <h2>3. Vos Lignes & Trajets</h2>
+    <p class="instruction">Quelles sont vos lignes principales et leur tarif ?</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Nom de la Ligne</th>
+                <th>Villes d'arrêt (Ex: Douala -> Bafoussam)</th>
+                <th>Prix (FCFA)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+            <tr><td><input type="text"></td><td><input type="text"></td><td><input type="text"></td></tr>
+        </tbody>
+    </table>
+
+    <h2>4. Horaires de Départ (Routine)</h2>
+    <div class="form-group">
+        <label>Quelles sont vos heures de départ habituelles ?</label>
+        <textarea placeholder="Ex: Tous les jours à 08h00, 10h00, 12h30 et 15h00 pour la ligne Douala-Bafoussam..."></textarea>
+    </div>
+
+    <div class="footer-note">
+        Merci de remplir ce document et de nous le renvoyer en cliquant sur "Imprimer" > "Enregistrer au format PDF".<br>
+        <strong>Équipe EasyTravel</strong>
+    </div>
+</div>
+
+</body>
+</html>

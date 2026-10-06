@@ -9,6 +9,7 @@ app_name = 'payments'
 
 urlpatterns = [
     path('payer/<int:booking_id>/', views.initiate_booking_payment, name='initiate'),
+    path('payer-panier/<int:cart_id>/', views.initiate_cart_payment, name='initiate_cart'),
     path('simulation/<int:booking_id>/', views.simulation_checkout, name='simulation_checkout'),
     path('simulation/<int:booking_id>/process/', views.simulation_process, name='simulation_process'),
     path('cinetpay/notification/', views.cinetpay_notification, name='notification'),

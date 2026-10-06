@@ -1,0 +1,111 @@
+{% extends "travel/base.html" %}
+{% load static %}
+
+{% block title %}Votre avis sur votre voyage | EasyTravel{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-lg shadow-xl overflow-hidden">
+        <div class="bg-blue-600 px-6 py-8 text-center">
+            <h1 class="text-3xl font-extrabold text-white">Comment s'est passé votre voyage ?</h1>
+            <p class="mt-2 text-blue-100 text-lg">
+                {{ booking.departure_stop.city.name }} &rarr; {{ booking.arrival_stop.city.name }} avec {{ booking.departure.agency.name }}
+            </p>
+        </div>
+        
+        <div class="px-6 py-8">
+            <p class="text-gray-600 mb-8 text-center text-lg">
+                Bonjour <strong>{{ booking.traveler_name }}</strong>, votre avis nous aide à améliorer continuellement la qualité des services proposés sur EasyTravel.
+            </p>
+            
+            <form method="POST" action="{% url 'bookings:feedback' booking.reference %}" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="text-center">
+                    <label class="block text-sm font-medium text-gray-700 mb-4">Note Globale (sur 5)</label>
+                    
+                    <div class="flex justify-center items-center space-x-2" id="star-rating">
+                        <!-- Étoiles cliquables -->
+                        {% for i in "12345" %}
+                        <button type="button" data-rating="{{ forloop.counter }}" class="star-btn text-gray-300 hover:text-yellow-400 focus:outline-none transition-colors duration-150">
+                            <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <!-- Champ caché pour stocker la valeur -->
+                    <input type="hidden" name="rating" id="rating-input" value="5">
+                    <p id="rating-text" class="mt-2 text-sm text-yellow-600 font-medium">Excellent</p>
+                </div>
+
+                <div>
+                    <label for="comment" class="block text-sm font-medium text-gray-700">Votre commentaire (optionnel)</label>
+                    <div class="mt-1">
+                        <textarea id="comment" name="comment" rows="4" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md" placeholder="Qu'avez-vous pensé de la ponctualité, du confort et du service client ?"></textarea>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        Envoyer mon avis
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const stars = document.querySelectorAll('.star-btn');
+        const ratingInput = document.getElementById('rating-input');
+        const ratingText = document.getElementById('rating-text');
+        
+        const texts = {
+            1: "Très décevant",
+            2: "Médiocre",
+            3: "Correct",
+            4: "Très bien",
+            5: "Excellent"
+        };
+
+        function updateStars(rating) {
+            stars.forEach(star => {
+                const starRating = parseInt(star.getAttribute('data-rating'));
+                if (starRating <= rating) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.classList.remove('text-yellow-400');
+                    star.classList.add('text-gray-300');
+                }
+            });
+            ratingText.textContent = texts[rating];
+        }
+
+        // Initialize with 5 stars
+        updateStars(5);
+
+        stars.forEach(star => {
+            // Hover effect
+            star.addEventListener('mouseover', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                updateStars(rating);
+            });
+
+            // Click effect
+            star.addEventListener('click', function() {
+                const rating = parseInt(this.getAttribute('data-rating'));
+                ratingInput.value = rating;
+                updateStars(rating);
+            });
+        });
+
+        // Reset to selected value when mouse leaves the star area
+        document.getElementById('star-rating').addEventListener('mouseleave', function() {
+            updateStars(parseInt(ratingInput.value));
+        });
+    });
+</script>
+{% endblock %}

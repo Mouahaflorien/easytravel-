@@ -78,7 +78,7 @@ class VehicleForm(forms.ModelForm):
             from django.utils import timezone
             today = timezone.localdate()
             # Vérifier que la réduction de capacité ne casse pas des réservations déjà validées
-            future_deps = self.instance.departures.filter(
+            future_deps = self.instance.departure_set.filter(
                 date__gte=today
             ).exclude(status__in=['departed', 'cancelled'])
             for dep in future_deps:
@@ -89,6 +89,22 @@ class VehicleForm(forms.ModelForm):
                         f"sur '{dep.line.name}' compte déjà {dep.booked_seats} réservations actives."
                     )
         return new_capacity
+
+    def clean_status(self):
+        new_status = self.cleaned_data.get('status')
+        if self.instance and self.instance.pk and new_status in ['maintenance', 'out_of_service']:
+            from django.utils import timezone
+            today = timezone.localdate()
+            future_deps = self.instance.departure_set.filter(
+                date__gte=today
+            ).exclude(status__in=['departed', 'cancelled'])
+            if future_deps.exists():
+                raise forms.ValidationError(
+                    f"Impossible de mettre ce véhicule en maintenance/hors service. "
+                    f"Il est encore assigné à {future_deps.count()} départ(s) à venir. "
+                    f"Veuillez d'abord réattribuer ces trajets."
+                )
+        return new_status
 
 class DriverForm(forms.ModelForm):
     class Meta:
@@ -108,6 +124,22 @@ class DriverForm(forms.ModelForm):
             'license_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: CE-2018-D-0921'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
+
+    def clean_is_active(self):
+        is_active = self.cleaned_data.get('is_active')
+        if self.instance and self.instance.pk and not is_active:
+            from django.utils import timezone
+            today = timezone.localdate()
+            future_deps = self.instance.departures.filter(
+                date__gte=today
+            ).exclude(status__in=['departed', 'cancelled'])
+            if future_deps.exists():
+                raise forms.ValidationError(
+                    f"Impossible de désactiver ce chauffeur. "
+                    f"Il est encore assigné à {future_deps.count()} départ(s) à venir. "
+                    f"Veuillez d'abord réattribuer ces trajets à un autre chauffeur."
+                )
+        return is_active
 
 
 class DepartureForm(forms.ModelForm):
@@ -302,6 +334,8 @@ class AgencyBookingForm(forms.ModelForm):
         selected_departure = kwargs.pop('departure', None)
         super().__init__(*args, **kwargs)
         self.fields['traveler_email'].required = False
+        self.fields['departure_stop'].required = True
+        self.fields['arrival_stop'].required = True
         
         from travel.models import LineStop, Departure
         from django.utils import timezone

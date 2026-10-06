@@ -1,0 +1,12 @@
+Bonjour {{ booking.traveler_name }},
+
+Nous espérons que vous avez fait un excellent voyage de {{ start_city }} vers {{ end_city }} avec {{ booking.departure.agency.name }} !
+
+Chez EasyTravel, votre confort et votre sécurité sont notre priorité. C'est pourquoi votre avis compte énormément pour nous.
+
+Accepteriez-vous de prendre 1 minute pour évaluer votre expérience ?
+Lien du sondage : {{ survey_url }}
+
+Merci pour votre confiance, et à très bientôt sur EasyTravel.cm !
+
+L'équipe EasyTravel

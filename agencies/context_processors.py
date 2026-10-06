@@ -10,10 +10,14 @@ def get_current_agency(request):
     if not request.user.is_authenticated:
         return None
     
-    # 1. Agence possédée par l'utilisateur
-    agency = request.user.agencies_owned.first()
+    # 1. L'agence à laquelle l'utilisateur est rattaché (employé ou manager)
+    agency = getattr(request.user, 'agency', None)
     
-    # 2. Si super-administrateur global de la plateforme sans agence en propre
+    # 2. S'il n'est rattaché à aucune agence, on vérifie s'il en est le créateur/propriétaire initial
+    if not agency:
+        agency = request.user.agencies_owned.first()
+    
+    # 3. Si super-administrateur global de la plateforme (sans agence en propre)
     if not agency and (request.user.is_superuser or request.user.is_staff):
         agency_id = request.session.get('current_agency_id')
         if agency_id:

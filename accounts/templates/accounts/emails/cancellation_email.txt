@@ -1,0 +1,10 @@
+Bonjour {{ booking.traveler_name }},
+
+Nous vous confirmons l'annulation de votre réservation avec la référence : {{ booking.reference }} pour le trajet {{ start_city }} - {{ end_city }}.
+
+Comme convenu, le montant intégral de votre billet ({{ booking.total_amount }} FCFA) a été recrédité sur votre portefeuille EasyTravel. 
+
+Vous pouvez désormais utiliser ce solde pour vos prochaines réservations sur notre plateforme. Connectez-vous à votre compte pour consulter votre solde actuel.
+
+Cordialement,
+L'équipe EasyTravel

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Votre avis compte !</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f5;
+            color: #333333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2563eb;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .content {
+            padding: 30px;
+            line-height: 1.6;
+        }
+        .content p {
+            margin-bottom: 15px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #f59e0b;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 15px;
+            text-align: center;
+            font-size: 12px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Comment s'est passé votre voyage ?</h1>
+        </div>
+        <div class="content">
+            <p>Bonjour <strong>{{ booking.traveler_name }}</strong>,</p>
+            <p>Nous espérons que vous avez fait un excellent voyage de <strong>{{ start_city }}</strong> vers <strong>{{ end_city }}</strong> à bord de <strong>{{ booking.departure.agency.name }}</strong>.</p>
+            <p>Chez EasyTravel, votre confort et votre sécurité sont notre priorité absolue. C'est pourquoi votre avis compte énormément pour nous et pour l'agence.</p>
+            <p>Accepteriez-vous de prendre 1 minute pour évaluer votre expérience ?</p>
+            <div style="text-align: center;">
+                <a href="{{ survey_url }}" class="btn">Donner mon avis</a>
+            </div>
+            <p>Merci pour votre confiance, et à très bientôt sur EasyTravel.cm !</p>
+        </div>
+        <div class="footer">
+            <p>L'équipe EasyTravel<br>Réservez, Voyagez, Souriez.</p>
+        </div>
+    </div>
+</body>
+</html>

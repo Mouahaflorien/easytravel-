@@ -25,6 +25,8 @@ urlpatterns = [
     path('reservations/', views.BookingListView.as_view(), name='booking_list'),
     path('reservations/nouvelle/', views.agency_booking_create, name='booking_create'),
     path('reservations/<int:booking_id>/statut/', views.update_booking_status, name='update_booking_status'),
+    path('reservations/<int:booking_id>/rappel/', views.send_booking_reminder, name='send_booking_reminder'),
+    path('reservations/scan/', views.ajax_scan_ticket, name='ajax_scan_ticket'),
     path('departs/<int:departure_id>/manifeste/', views.departure_manifest, name='departure_manifest'),
     path('departs/<int:departure_id>/passagers/', views.departure_manifest, name='departure_passengers'),
     

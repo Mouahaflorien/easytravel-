@@ -4,6 +4,20 @@
 {% block title %}Dashboard - Mon Agence{% endblock %}
 
 {% block content %}
+<style>
+    /* Masquer la scrollbar pour le menu défilant tout en gardant le défilement actif */
+    .scroll-hide-bar::-webkit-scrollbar {
+        display: none;
+    }
+    .scroll-hide-bar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+</style>
+
 {% if current_agency %}
 
 <!-- En-tête du Dashboard avec Titre, Horodatage et Actions Rapides Quotidiennes -->
@@ -11,17 +25,32 @@
     <div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <h3 class="fw-bold text-dark mb-0 fs-4">Tableau de Bord</h3>
-            <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 fw-semibold small">
-                {{ period_label }}
-            </span>
+            <div class="dropdown">
+                <button class="btn btn-sm text-primary rounded-pill px-3 py-1 fw-semibold border-0 d-inline-flex align-items-center gap-1 shadow-none" style="background-color: #ede9fe; color: #6d28d9 !important;" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Changer la période">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    {{ period_label }}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="ms-1"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <ul class="dropdown-menu shadow-sm border-0 mt-2 rounded-3" style="min-width: 200px;">
+                    <li><h6 class="dropdown-header text-muted small text-uppercase fw-bold">Période d'analyse</h6></li>
+                    <li><a class="dropdown-item {% if current_period == 'today' %}fw-bold{% endif %}" {% if current_period == 'today' %}style="background-color: #f3e8ff !important; color: #7e22ce !important;"{% endif %} href="?period=today">Aujourd'hui</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'week' %}fw-bold{% endif %}" {% if current_period == 'week' %}style="background-color: #f3e8ff !important; color: #7e22ce !important;"{% endif %} href="?period=week">7 derniers jours</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'month' %}fw-bold{% endif %}" {% if current_period == 'month' %}style="background-color: #f3e8ff !important; color: #7e22ce !important;"{% endif %} href="?period=month">Ce mois-ci</a></li>
+                    <li><a class="dropdown-item {% if current_period == 'year' %}fw-bold{% endif %}" {% if current_period == 'year' %}style="background-color: #f3e8ff !important; color: #7e22ce !important;"{% endif %} href="?period=year">Année {{ last_updated.year }}</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item {% if current_period == 'all' %}fw-bold{% endif %}" {% if current_period == 'all' %}style="background-color: #f3e8ff !important; color: #7e22ce !important;"{% endif %} href="?period=all">Global</a></li>
+                </ul>
+            </div>
         </div>
         <p class="text-muted small mb-0 mt-1">Suivez les performances de vente, les encaissements réels et le trafic de votre flotte.</p>
     </div>
 
-    <div class="d-flex flex-wrap align-items-center gap-2">
+    <div class="d-flex flex-wrap align-items-center gap-3">
         <!-- Date et Heure de Dernière Actualisation -->
         <div class="d-inline-flex align-items-center gap-2 bg-white border rounded-pill px-3 py-1.5 shadow-xs text-muted small">
-            <span class="rounded-circle bg-success d-inline-block" style="width: 7px; height: 7px;"></span>
+            <span class="rounded-circle d-inline-block" style="width: 7px; height: 7px; background-color: #10b981;"></span>
             <span>Actualisé à <strong>{{ last_updated|date:"H:i" }}</strong></span>
             <a href="?period={{ current_period }}" class="text-secondary ms-1 d-inline-flex align-items-center" title="Rafraîchir les statistiques">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -31,177 +60,81 @@
                 </svg>
             </a>
         </div>
-
-        <!-- Bouton d'action rapide 1 : Programmer un Départ -->
-        <a href="{% url 'agencies:departure_create' %}" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Programmer un départ</span>
-        </a>
-
-        <!-- Bouton d'action rapide 2 : Vente Guichet / Nouvelle Réservation -->
-        <a href="{% url 'agencies:booking_create' %}" class="btn btn-primary rounded-pill px-3 py-2 fw-semibold d-inline-flex align-items-center gap-2 shadow-xs text-white">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            <span>Nouvelle Réservation</span>
-        </a>
     </div>
 </div>
 
-{% if pending_anomalies_count > 0 %}
-<!-- Bannière d'Alerte Sentinelle Gemini -->
-<div class="alert alert-warning border-warning border-opacity-25 rounded-4 p-3 mb-4 shadow-xs d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <div class="d-flex align-items-center gap-2.5">
-        <div class="p-2 rounded-3 bg-warning text-white flex-shrink-0">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
-        </div>
-        <div>
-            <strong class="text-dark small d-block">Sentinelle IA : {{ pending_anomalies_count }} anomalie(s) ou écart(s) suspect(s) à trancher</strong>
-            <span class="text-muted" style="font-size: 0.76rem;">Des incohérences de caisse, tarifs hors grille ou collisions d'identité ont été signalées. Veuillez arbitrer ces dossiers.</span>
-        </div>
-    </div>
-    <a href="{% url 'agencies:anomaly_list' %}" class="btn btn-sm btn-dark rounded-pill px-3 py-1.5 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-xs">
-        <span>Ouvrir le Centre d'Arbitrage</span>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-    </a>
-</div>
-{% endif %}
 
-<!-- Sélecteur de Période Interactif -->
-<div class="card border-0 shadow-sm rounded-4 p-2.5 mb-4 bg-white">
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div class="d-flex align-items-center gap-2 small text-secondary fw-semibold ps-2">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="16" y1="2" x2="16" y2="6"></line>
-                <line x1="8" y1="2" x2="8" y2="6"></line>
-                <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            <span>Période des statistiques :</span>
-        </div>
-
-        <div class="btn-group p-1 bg-light rounded-pill border" role="group">
-            <a href="?period=today" class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if current_period == 'today' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
-                Aujourd'hui
-            </a>
-            <a href="?period=week" class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if current_period == 'week' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
-                7 derniers jours
-            </a>
-            <a href="?period=month" class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if current_period == 'month' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
-                Ce mois-ci
-            </a>
-            <a href="?period=year" class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if current_period == 'year' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
-                Année {{ last_updated.year }}
-            </a>
-            <a href="?period=all" class="btn btn-sm rounded-pill px-3 py-1 fw-semibold {% if current_period == 'all' %}btn-primary text-white shadow-xs{% else %}text-secondary border-0{% endif %}">
-                Global
-            </a>
-        </div>
-
-        <div class="pe-2 text-muted small d-none d-md-block">
-            <span>Intervalle : <strong>{{ period_date_range }}</strong></span>
-        </div>
-    </div>
-</div>
 
 <!-- Cartes Statistiques à fort contraste : Distinction Rigoureuse Ventes vs Encaissements -->
 <div class="row g-3 mb-4">
-    <!-- 1. Recettes Encaissées (Trésorerie Réelle) -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card p-4 h-100">
+    <!-- 1. Trésorerie (Recettes Encaissées) -->
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card p-4 h-100 border-0 shadow-sm rounded-4 bg-white">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <span class="stat-title">Recettes Encaissées</span>
-                <div class="p-2 rounded-3 bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                <span class="stat-title text-muted fw-bold">Recettes Encaissées</span>
+                <div class="p-2 rounded-3 text-success d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; background-color: #d1fae5; color: #059669 !important;">
+                    <!-- Icône Carte Bancaire au lieu du Dollar -->
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+                        <line x1="1" y1="10" x2="23" y2="10"></line>
                     </svg>
                 </div>
             </div>
-            <div class="stat-value text-dark">
-                {{ stats.total_revenue|format_money }} <span class="fs-6 fw-semibold text-secondary">FCFA</span>
+            <div class="stat-value text-dark fs-3 fw-bolder">
+                {{ stats.total_revenue|format_money }} <span class="text-secondary fw-medium" style="font-size: 0.65rem;">FCFA</span>
             </div>
-            <div class="mt-2 text-muted small d-flex justify-content-between align-items-center">
+            <div class="mt-2 text-muted small d-flex align-items-center gap-2 flex-wrap">
                 <span>{{ stats.paid_bookings_count }} réservation(s) réglée(s)</span>
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fw-semibold" style="font-size: 0.7rem;">
-                    En caisse
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fw-semibold border border-success border-opacity-25" style="font-size: 0.7rem;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                    +12% vs hier
                 </span>
             </div>
         </div>
     </div>
 
-    <!-- 2. Volume Total des Ventes (Engagements de voyage) -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card p-4 h-100">
+    <!-- 2. Billets Vendus (Volume global) -->
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card p-4 h-100 border-0 shadow-sm rounded-4 bg-white">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <span class="stat-title">Volume des Ventes</span>
-                <div class="p-2 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-                        <path d="M13 5v2"></path>
-                        <path d="M13 17v2"></path>
+                <span class="stat-title text-muted fw-bold">Billets Vendus</span>
+                <div class="p-2 rounded-3 text-primary d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; background-color: #ede9fe; color: #6d28d9 !important;">
+                    <!-- Icône Passagers au lieu d'un carré vide -->
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
                     </svg>
                 </div>
             </div>
-            <div class="stat-value text-dark">
-                {{ stats.total_sales|format_money }} <span class="fs-6 fw-semibold text-secondary">FCFA</span>
+            <div class="stat-value text-dark fs-3 fw-bolder">
+                {{ stats.tickets_sold }} <span class="small text-muted fw-normal" style="font-size: 0.75rem;">places</span>
             </div>
-            <div class="mt-2 text-muted small d-flex justify-content-between align-items-center">
-                <span>{{ stats.tickets_sold }} place(s) vendue(s)</span>
-                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-semibold" style="font-size: 0.7rem;">
-                    {{ stats.collection_rate }}% encaissé
+            <div class="mt-2 text-muted small d-flex flex-wrap align-items-center gap-2">
+                <span>Total ventes: {{ stats.total_sales|format_money }} <span class="text-secondary" style="font-size: 0.65rem;">FCFA</span></span>
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fw-semibold border border-success border-opacity-25" style="font-size: 0.7rem;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="me-1"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                    +5% vs hier
                 </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. En Attente d'Encaissement (Créances au Guichet) -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card p-4 h-100">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <span class="stat-title">À Encaisser</span>
-                <div class="p-2 rounded-3 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background-color: #fef3c7; color: #b45309;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                </div>
-            </div>
-            <div class="stat-value text-dark">
-                {{ stats.pending_amount|format_money }} <span class="fs-6 fw-semibold text-secondary">FCFA</span>
-            </div>
-            <div class="mt-2 text-muted small d-flex justify-content-between align-items-center">
-                <span>{{ stats.pending_bookings_count }} réservation(s)</span>
                 {% if stats.pending_amount > 0 %}
-                <span class="badge bg-warning bg-opacity-15 text-warning-emphasis rounded-pill fw-semibold" style="font-size: 0.7rem;">
-                    Règlement guichet
-                </span>
-                {% else %}
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill fw-semibold" style="font-size: 0.7rem;">
-                    À jour
+                <span class="text-warning fw-semibold" style="font-size: 0.75rem;">
+                    • Reste: {{ stats.pending_amount|format_money }} <span class="text-secondary" style="font-size: 0.65rem;">FCFA</span>
                 </span>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- 4. Départs à Venir & Remplissage -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card p-4 h-100">
+    <!-- 3. Départs à Venir & Remplissage -->
+    <div class="col-sm-6 col-xl-4">
+        <div class="stat-card p-4 h-100 border-0 shadow-sm rounded-4 bg-white">
             <div class="d-flex align-items-center justify-content-between mb-3">
-                <span class="stat-title">Départs à Venir</span>
-                <div class="p-2 rounded-3 bg-dark bg-opacity-10 text-dark d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <span class="stat-title text-muted fw-bold">Départs à Venir</span>
+                <div class="p-2 rounded-3 text-dark d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; background-color: #f1f5f9; color: #334155 !important;">
+                    <!-- Icône Calendrier -->
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="16" y1="2" x2="16" y2="6"></line>
                         <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -209,13 +142,13 @@
                     </svg>
                 </div>
             </div>
-            <div class="stat-value text-dark">
-                {{ stats.active_departures|default:0 }}
+            <div class="stat-value text-dark fs-3 fw-bolder">
+                {{ stats.active_departures|default:0 }} <span class="small text-muted fw-normal" style="font-size: 0.75rem;">voyages</span>
             </div>
-            <div class="mt-2 text-muted small d-flex justify-content-between align-items-center">
-                <span>{{ stats.today_total|default:0 }} auj. ({{ stats.today_boarding|default:0 }} en embarq.)</span>
-                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill fw-semibold" style="font-size: 0.7rem;">
-                    {{ stats.total_available_seats|default:0 }} pl. libres
+            <div class="mt-2 text-muted small d-flex flex-wrap align-items-center gap-2">
+                <span>{{ stats.today_total|default:0 }} auj. ({{ stats.today_boarding|default:0 }} en cours)</span>
+                <span class="text-primary fw-semibold" style="font-size: 0.75rem;">
+                    • {{ stats.total_available_seats|default:0 }} pl. libres
                 </span>
             </div>
         </div>
@@ -223,32 +156,32 @@
 </div>
 
 <div class="row g-4">
-    <!-- Prochains Départs -->
-    <div class="col-lg-6">
-        <div class="table-card h-100">
-            <div class="table-header d-flex justify-content-between align-items-center">
+    <!-- Prochains Départs (Pleine Largeur) -->
+    <div class="col-12">
+        <div class="table-card h-100 shadow-sm border-0 rounded-4 bg-white">
+            <div class="table-header d-flex justify-content-between align-items-center p-3 border-bottom">
                 <div class="d-flex align-items-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-primary">
                         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                         <line x1="16" y1="2" x2="16" y2="6"></line>
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    <h5 class="fw-bold mb-0">Prochains Départs</h5>
+                    <h5 class="fw-bold mb-0 text-dark">Prochains Départs</h5>
                 </div>
-                <a href="{% url 'agencies:departure_list' %}" class="btn btn-sm btn-light border text-primary fw-semibold rounded-pill px-3 shadow-xs">
+                <a href="{% url 'agencies:departure_list' %}" class="btn btn-sm btn-light text-primary fw-semibold rounded-pill px-4">
                     Voir tout
                 </a>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-light">
+                        <thead class="table-light text-muted small text-uppercase">
                             <tr>
-                                <th class="ps-4">Trajet / Ligne</th>
-                                <th>Date & Heure</th>
-                                <th class="text-center">Places</th>
-                                <th class="text-end pe-4">Action</th>
+                                <th class="ps-4 py-3">Ligne</th>
+                                <th class="py-3">Date & Heure</th>
+                                <th class="text-center py-3">Disponibilité</th>
+                                <th class="text-end pe-4 py-3">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -256,130 +189,34 @@
                             <tr>
                                 <td class="ps-4">
                                     <strong class="text-dark">{{ dep.line.name }}</strong>
-                                    <div class="text-muted small" style="font-size: 0.75rem;">
-                                        {{ dep.vehicle.vehicle_type|default:"Bus standard" }} • {{ dep.vehicle.registration|default:"-" }}
-                                        {% if dep.driver %} • Chauffeur : {{ dep.driver.full_name }}{% endif %}
+                                    <div class="text-muted" style="font-size: 0.8rem;">
+                                        {{ dep.vehicle.vehicle_type|default:"Bus standard" }}
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="small fw-medium">{{ dep.date|date:"d/m/Y" }}</div>
-                                    <div class="small text-primary fw-bold">{{ dep.time|time:"H:i" }}</div>
+                                    <div class="fw-medium text-dark">{{ dep.date|date:"d/m/Y" }}</div>
+                                    <div class="text-primary fw-bold">{{ dep.time|time:"H:i" }}</div>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge bg-primary bg-opacity-10 text-primary px-2.5 py-1 rounded-pill fw-semibold" style="font-size: 0.78rem;">
-                                        {{ dep.available_capacity }} / {{ dep.total_capacity }} libres
+                                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-bold">
+                                        {{ dep.available_capacity }} pl.
                                     </span>
                                 </td>
                                 <td class="text-end pe-4">
                                     {% if dep.is_closed_for_sale %}
-                                    <span class="badge bg-secondary bg-opacity-15 text-secondary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.75rem;">
-                                        Clôturé
-                                    </span>
+                                    <span class="text-secondary fw-bold small">Clôturé</span>
                                     {% else %}
-                                    <a href="{% url 'agencies:booking_create' %}?departure_id={{ dep.id }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold shadow-xs" title="Vente guichet pour ce départ">
-                                        + Billet
+                                    <a href="{% url 'agencies:booking_create' %}?departure_id={{ dep.id }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-semibold">
+                                        Vendre
                                     </a>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-4">Aucun départ prévu prochainement.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted py-5">Aucun départ prévu prochainement.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Dernières Réservations avec Double Statut Clair (Réservation & Encaissement) -->
-    <div class="col-lg-6">
-        <div class="table-card h-100">
-            <div class="table-header d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-2">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-success">
-                        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
-                        <path d="M13 5v2"></path>
-                        <path d="M13 17v2"></path>
-                    </svg>
-                    <h5 class="fw-bold mb-0">Dernières Réservations & Encaissements</h5>
-                </div>
-                <a href="{% url 'agencies:booking_list' %}" class="btn btn-sm btn-light border text-secondary fw-semibold rounded-pill px-3 shadow-xs">
-                    Consulter
-                </a>
-            </div>
-            <div class="card-body p-0">
-                <div class="list-group list-group-flush">
-                    {% for booking in recent_bookings %}
-                    <div class="list-group-item px-4 py-3 border-bottom">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="fw-semibold text-dark fs-6">{{ booking.traveler_name }}</span>
-                                <span class="badge border px-2 py-0.5 fw-semibold font-monospace" style="font-size: 0.72rem; background-color: #f8fafc; color: #475569;">
-                                    {{ booking.reference }}
-                                </span>
-                            </div>
-                            <span class="fw-bold {% if booking.payment_status == 'paid' %}text-success{% else %}text-warning-emphasis{% endif %}" style="font-size: 0.95rem;">
-                                {{ booking.total_amount|format_money }} FCFA
-                            </span>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-2">
-                            <!-- Trajet court -->
-                            <div class="d-flex align-items-center gap-1 text-secondary small">
-                                {% if booking.departure_stop and booking.arrival_stop %}
-                                    <span>{{ booking.departure_stop.city.name }}</span>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                        <polyline points="12 5 19 12 12 19"></polyline>
-                                    </svg>
-                                    <span>{{ booking.arrival_stop.city.name }}</span>
-                                {% else %}
-                                    <span>{{ booking.departure.line.name|format_route }}</span>
-                                {% endif %}
-                                <span class="text-muted ms-1" style="font-size: 0.74rem;">({{ booking.seats_reserved }} pl.)</span>
-                            </div>
-
-                            <!-- Double Statut : Réservation & Paiement -->
-                            <div class="d-flex align-items-center gap-1.5">
-                                <!-- Statut Réservation -->
-                                {% if booking.status == 'boarded' %}
-                                    <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
-                                        Embarqué(e)
-                                    </span>
-                                {% elif booking.status == 'confirmed' %}
-                                    <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
-                                        Confirmée
-                                    </span>
-                                {% elif booking.status == 'cancelled' %}
-                                    <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2.5 py-1 fw-semibold" style="font-size: 0.72rem;">
-                                        Annulée
-                                    </span>
-                                {% endif %}
-
-                                <!-- Statut Paiement (Évite la confusion Vente vs Encaissement) -->
-                                {% if booking.payment_status == 'paid' %}
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1" style="font-size: 0.72rem;" title="Paiement vérifié et encaissé">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                        <span>Encaissé</span>
-                                    </span>
-                                {% else %}
-                                    <!-- Bouton rapide Encaisser -->
-                                    <form method="post" action="{% url 'agencies:update_booking_status' booking.id %}" class="d-inline m-0">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="payment_status" value="paid">
-                                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                                        <button type="submit" class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning border-opacity-25 rounded-pill px-2.5 py-1 fw-semibold btn btn-sm p-0 border-0" title="Cliquer pour enregistrer l'encaissement au guichet">
-                                            À Encaisser ➔
-                                        </button>
-                                    </form>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="p-4 text-center text-muted">Aucune réservation récente sur cette période.</div>
-                    {% endfor %}
                 </div>
             </div>
         </div>

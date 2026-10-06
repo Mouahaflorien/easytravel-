@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Annulation de Billet</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+        <h2 style="color: #dc3545; text-align: center; margin-bottom: 20px;">Billet Annulé & Remboursé</h2>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">Bonjour <strong>{{ booking.traveler_name }}</strong>,</p>
+        
+        <p style="color: #333; font-size: 16px; line-height: 1.5;">
+            Nous vous confirmons l'annulation de votre réservation <strong>{{ booking.reference }}</strong> pour le trajet <strong>{{ start_city }} - {{ end_city }}</strong>.
+        </p>
+        
+        <div style="background-color: #f8f9fa; border-left: 4px solid #198754; padding: 15px; margin: 20px 0;">
+            <p style="margin: 0; color: #333; font-size: 15px;">
+                Comme convenu, le montant intégral de votre billet (<strong>{{ booking.total_amount }} FCFA</strong>) a été crédité sur votre <strong>Portefeuille EasyTravel</strong>.
+            </p>
+        </div>
+        
+        <p style="color: #555; font-size: 15px; line-height: 1.5;">
+            Vous pouvez désormais utiliser ce solde pour régler rapidement vos prochaines réservations. Connectez-vous à votre espace voyageur pour consulter votre solde actuel.
+        </p>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ site_url }}" style="background-color: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 4px; font-weight: bold; display: inline-block;">Accéder à mon espace</a>
+        </div>
+        
+        <p style="color: #888; font-size: 13px; text-align: center; margin-top: 30px; border-top: 1px solid #eaeaea; padding-top: 15px;">
+            Merci de votre confiance. <br>
+            L'équipe EasyTravel
+        </p>
+    </div>
+</body>
+</html>

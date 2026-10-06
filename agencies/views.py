@@ -2,10 +2,9 @@ from datetime import timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.views import LoginView
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_POST
 from django.urls import reverse_lazy, reverse
 from django.db.models import Sum, Q
@@ -15,7 +14,21 @@ from .context_processors import get_current_agency
 from travel.models import Departure, Vehicle
 from bookings.models import Booking
 from .forms import VehicleForm, DepartureForm, AgencySettingsForm, AgencyBookingForm
+from django.contrib.auth.views import LoginView
 
+def is_manager(user):
+    return user.is_authenticated and user.role in ['admin', 'manager']
+
+def manager_required(view_func):
+    return user_passes_test(is_manager, login_url='agencies:login')(view_func)
+
+class ManagerRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return is_manager(self.request.user)
+    
+    def handle_no_permission(self):
+        messages.error(self.request, "Accès refusé. Seul le chef d'agence peut effectuer cette action.")
+        return redirect('agencies:dashboard')
 
 @login_required(login_url='agencies:login')
 def switch_agency(request, agency_id):
@@ -156,6 +169,11 @@ class AgencyLoginView(LoginView):
     
     def get_success_url(self):
         return reverse_lazy('agencies:dashboard')
+        
+    def get(self, request, *args, **kwargs):
+        if request.session.pop('kicked_out', False):
+            messages.warning(request, "Votre session a été fermée car ce compte s'est connecté depuis un autre appareil.")
+        return super().get(request, *args, **kwargs)
 
 class AgencyMixin:
     """Mixin to restrict querysets to the current user's active agency"""
@@ -186,7 +204,7 @@ class VehicleListView(AgencyMixin, LoginRequiredMixin, ListView):
         context['maintenance_count'] = qs.filter(status__in=['maintenance', 'out_of_service']).count()
         return context
 
-class VehicleCreateView(AgencyMixin, LoginRequiredMixin, CreateView):
+class VehicleCreateView(AgencyMixin, ManagerRequiredMixin, CreateView):
     model = Vehicle
     form_class = VehicleForm
     template_name = 'agencies/vehicle_form.html'
@@ -196,13 +214,13 @@ class VehicleCreateView(AgencyMixin, LoginRequiredMixin, CreateView):
         form.instance.agency = get_current_agency(self.request)
         return super().form_valid(form)
 
-class VehicleUpdateView(AgencyMixin, LoginRequiredMixin, UpdateView):
+class VehicleUpdateView(AgencyMixin, ManagerRequiredMixin, UpdateView):
     model = Vehicle
     form_class = VehicleForm
     template_name = 'agencies/vehicle_form.html'
     success_url = reverse_lazy('agencies:vehicle_list')
 
-class VehicleDeleteView(AgencyMixin, LoginRequiredMixin, DeleteView):
+class VehicleDeleteView(AgencyMixin, ManagerRequiredMixin, DeleteView):
     model = Vehicle
     template_name = 'agencies/vehicle_confirm_delete.html'
     success_url = reverse_lazy('agencies:vehicle_list')
@@ -286,7 +304,7 @@ class DepartureListView(AgencyMixin, LoginRequiredMixin, ListView):
 
         return context
 
-class DepartureCreateView(AgencyMixin, LoginRequiredMixin, CreateView):
+class DepartureCreateView(AgencyMixin, ManagerRequiredMixin, CreateView):
     model = Departure
     form_class = DepartureForm
     template_name = 'agencies/departure_form.html'
@@ -304,7 +322,7 @@ class DepartureCreateView(AgencyMixin, LoginRequiredMixin, CreateView):
         messages.success(self.request, f"Le départ '{form.instance.line.name}' a été programmé avec succès !")
         return super().form_valid(form)
 
-class DepartureUpdateView(AgencyMixin, LoginRequiredMixin, UpdateView):
+class DepartureUpdateView(AgencyMixin, ManagerRequiredMixin, UpdateView):
     model = Departure
     form_class = DepartureForm
     template_name = 'agencies/departure_form.html'
@@ -319,7 +337,7 @@ class DepartureUpdateView(AgencyMixin, LoginRequiredMixin, UpdateView):
         messages.success(self.request, f"Le départ '{form.instance.line.name}' a été mis à jour avec succès !")
         return super().form_valid(form)
 
-class DepartureDeleteView(AgencyMixin, LoginRequiredMixin, DeleteView):
+class DepartureDeleteView(AgencyMixin, ManagerRequiredMixin, DeleteView):
     model = Departure
     template_name = 'agencies/departure_confirm_delete.html'
     success_url = reverse_lazy('agencies:departure_list')
@@ -341,7 +359,7 @@ class DepartureDeleteView(AgencyMixin, LoginRequiredMixin, DeleteView):
         messages.success(self.request, "Le départ vide a été supprimé définitivement.")
         return super().form_valid(form)
 
-@login_required(login_url='agencies:login')
+@manager_required
 def departure_cancel(request, pk):
     """
     Annulation officielle d'un départ avec passagers enregistrés.
@@ -455,6 +473,45 @@ class BookingListView(AgencyMixin, LoginRequiredMixin, ListView):
         return context
 
 
+from django.http import JsonResponse
+import re
+
+@login_required(login_url='agencies:login')
+@require_POST
+def ajax_scan_ticket(request):
+    """Endpoint AJAX pour scanner un billet et l'embarquer instantanément via mobile"""
+    agency = get_current_agency(request)
+    payload = request.POST.get('payload', '')
+    
+    # Extraire la référence (REF:UUID...)
+    ref_match = re.search(r'REF:([a-zA-Z0-9\-]+)', payload)
+    if not ref_match:
+        # Tenter de lire directement si c'est juste un UUID
+        reference = payload.strip()
+    else:
+        reference = ref_match.group(1)
+        
+    try:
+        booking = Booking.objects.get(reference=reference, departure__agency=agency)
+    except Booking.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': "Billet introuvable pour cette agence."}, status=404)
+        
+    if booking.status == 'cancelled':
+        return JsonResponse({'status': 'error', 'message': f"Ce billet a été ANNULÉ."})
+        
+    if booking.status == 'boarded':
+        return JsonResponse({'status': 'warning', 'message': f"Le passager {booking.traveler_name} a DÉJÀ embarqué !"})
+        
+    # Effectuer l'embarquement
+    booking.status = 'boarded'
+    booking.save(update_fields=['status'])
+    
+    return JsonResponse({
+        'status': 'success', 
+        'message': f"Succès : {booking.traveler_name} ({booking.seats_reserved} place) embarqué !",
+        'booking_id': booking.id
+    })
+
 @login_required(login_url='agencies:login')
 @require_POST
 def update_booking_status(request, booking_id):
@@ -516,7 +573,12 @@ def agency_booking_create(request):
             start_stop = booking.departure_stop
             end_stop = booking.arrival_stop
             unit_price = max(0, end_stop.price_from_start - start_stop.price_from_start)
-            booking.total_amount = unit_price * booking.seats_reserved
+            
+            # Au guichet, pas de frais de plateforme
+            booking.agency_amount = unit_price * booking.seats_reserved
+            booking.platform_fee = 0
+            booking.total_amount = booking.agency_amount
+            
             booking.status = 'confirmed'
             booking.user = request.user
             
@@ -524,6 +586,11 @@ def agency_booking_create(request):
                 booking.paid_at = timezone.now()
                 
             booking.save()
+            
+            # Envoi de l'email de confirmation si l'adresse email est renseignée
+            if booking.traveler_email:
+                from accounts.services.email_service import send_ticket_confirmation_email
+                send_ticket_confirmation_email(request, booking)
             
             # Décrémentation de la capacité
             departure.available_capacity = max(0, departure.available_capacity - booking.seats_reserved)
@@ -612,7 +679,7 @@ def departure_manifest(request, departure_id):
     })
 
 
-@login_required(login_url='agencies:login')
+@manager_required
 def agency_settings(request):
     """
     Paramètres complets de l'agence structurés selon les 5 modules métier :
@@ -647,7 +714,7 @@ def agency_settings(request):
 # CENTRE DE TRAITEMENT DES ANOMALIES & AUDIT INTELLIGENT GEMINI
 # -------------------------------------------------------------------------
 
-@login_required(login_url='agencies:login')
+@manager_required
 def anomaly_list(request):
     """
     Centre de traitement des anomalies et alertes de fraude détectées par Gemini.
@@ -705,7 +772,7 @@ def anomaly_list(request):
     })
 
 
-@login_required(login_url='agencies:login')
+@manager_required
 def anomaly_detail(request, pk):
     """
     Vue détaillée d'une anomalie avec rapport d'analyse Gemini et panneau d'arbitrage humain.
@@ -721,7 +788,7 @@ def anomaly_detail(request, pk):
     })
 
 
-@login_required(login_url='agencies:login')
+@manager_required
 @require_POST
 def anomaly_arbitrate(request, pk):
     """
@@ -781,7 +848,7 @@ def anomaly_arbitrate(request, pk):
     return redirect('agencies:anomaly_list')
 
 
-@login_required(login_url='agencies:login')
+@manager_required
 @require_POST
 def anomaly_run_audit(request):
     """
@@ -839,6 +906,32 @@ def mark_notifications_read(request):
     messages.success(request, "Toutes les notifications ont été marquées comme lues.")
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('agencies:dashboard')
     return redirect(next_url)
+
+@login_required(login_url='agencies:login')
+@require_POST
+def send_booking_reminder(request, booking_id):
+    """
+    Envoie un email de rappel manuel à un client.
+    """
+    agency = get_current_agency(request)
+    if not agency:
+        return JsonResponse({'status': 'error', 'message': "Agence introuvable."}, status=403)
+        
+    booking = get_object_or_404(Booking, id=booking_id, departure__agency=agency)
+    
+    if not booking.traveler_email:
+        messages.error(request, "Impossible d'envoyer un rappel : Ce passager n'a pas d'adresse email.")
+        return redirect(request.META.get('HTTP_REFERER', 'agencies:booking_list'))
+        
+    from accounts.services.email_service import send_trip_reminder_email
+    success = send_trip_reminder_email(booking)
+    
+    if success:
+        messages.success(request, f"Rappel envoyé avec succès à {booking.traveler_email}.")
+    else:
+        messages.error(request, "Une erreur s'est produite lors de l'envoi de l'email.")
+        
+    return redirect(request.META.get('HTTP_REFERER', 'agencies:booking_list'))
 
 
 

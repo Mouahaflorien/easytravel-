@@ -109,11 +109,14 @@ def search(request):
 
     # Injecter les détails de tronçon (prix, arrêts)
     for dep in departures_list:
+        # Prendre le pourcentage de frais depuis l'agence (par défaut 3% s'il y a un souci de float)
+        platform_fee_percent = float(dep.agency.platform_fee_percentage) / 100.0 if hasattr(dep.agency, 'platform_fee_percentage') else 0.03
+        
         if dep.line_id in start_stops_by_line and dep.line_id in end_stops_by_line:
             s_stop = start_stops_by_line[dep.line_id]
             e_stop = end_stops_by_line[dep.line_id]
             diff = e_stop.price_from_start - s_stop.price_from_start
-            dep.segment_price = diff if diff > 0 else (e_stop.price_from_start if e_stop.price_from_start > 0 else 5000)
+            base_price = diff if diff > 0 else (e_stop.price_from_start if e_stop.price_from_start > 0 else 5000)
             dep.segment_start_stop = s_stop
             dep.segment_end_stop = e_stop
         else:
@@ -121,9 +124,15 @@ def search(request):
             if stops:
                 dep.segment_start_stop = stops[0]
                 dep.segment_end_stop = stops[-1]
-                dep.segment_price = stops[-1].price_from_start if stops[-1].price_from_start > 0 else 5000
+                base_price = stops[-1].price_from_start if stops[-1].price_from_start > 0 else 5000
             else:
-                dep.segment_price = 5000
+                base_price = 5000
+        
+        # Le prix affiché au voyageur inclut les frais de plateforme
+        base_price_float = float(base_price)
+        dep.agency_price = base_price_float
+        dep.platform_fee = base_price_float * platform_fee_percent
+        dep.segment_price = base_price_float + dep.platform_fee
 
     # 5. Préparer les dates pour le slider/carousel horizontal (14 jours)
     slider_start = min(today, selected_date)

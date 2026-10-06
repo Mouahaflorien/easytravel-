@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Billet</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <style>
+        body { background-color: #f8fafc; overflow-x: hidden; padding: 10px; }
+        .ticket-wrapper { box-shadow: none !important; border: 1px solid #e2e8f0; }
+        /* Hide public UI elements just in case */
+        nav, footer, .breadcrumb { display: none !important; }
+    </style>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+</html>

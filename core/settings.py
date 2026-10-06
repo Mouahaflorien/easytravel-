@@ -184,6 +184,11 @@ LOGIN_REDIRECT_URL = '/compte/mes-reservations/'
 LOGOUT_REDIRECT_URL = '/'
 LOGIN_URL = '/compte/connexion/'
 
+# Déconnexion automatique après inactivité (30 minutes)
+SESSION_COOKIE_AGE = 1800  # 30 minutes x 60 secondes
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
 # Production Security Headers (when DEBUG=False)
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -213,4 +218,9 @@ CAMPAY_ENVIRONMENT = os.getenv('CAMPAY_ENVIRONMENT', 'sandbox')
 
 # Payment Simulation & Sandbox Mode (True by default for tests & demo)
 PAYMENT_SIMULATION_MODE = os.getenv('PAYMENT_SIMULATION_MODE', 'True').lower() in ('true', '1', 't')
+
+
+# --- FEES & COMMISSIONS ---
+PLATFORM_FEE_PERCENTAGE = 0.03
+
 

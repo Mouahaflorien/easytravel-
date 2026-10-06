@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel de votre voyage EasyTravel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f1f5f9;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .content {
+            padding: 30px;
+        }
+        .ticket-summary {
+            background-color: #f8fafc;
+            border-left: 4px solid #2563eb;
+            border-radius: 0 8px 8px 0;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .ticket-summary p {
+            margin: 6px 0;
+            font-size: 15px;
+        }
+        .warning-box {
+            background-color: #fffbeb;
+            border: 1px solid #fef08a;
+            color: #b45309;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 20px 30px;
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Rappel de votre Voyage</h1>
+            <p>{{ booking.departure.agency.name }}</p>
+        </div>
+        <div class="content">
+            <h2 style="margin-top: 0; color: #0f172a;">Bonjour {{ booking.traveler_name }},</h2>
+            <p>La compagnie <strong>{{ booking.departure.agency.name }}</strong> vous rappelle que votre voyage approche à grands pas !</p>
+            
+            <div class="ticket-summary">
+                <p><strong>Référence :</strong> <span style="font-family: monospace; color: #1e3a8a;">{{ booking.reference }}</span></p>
+                <p><strong>Trajet :</strong> {{ start_city }} → {{ end_city }}</p>
+                <p><strong>Date de Départ :</strong> {{ booking.departure.date|date:"l d F Y" }}</p>
+                <p><strong>Heure de Départ :</strong> {{ booking.departure.time|time:"H:i" }}</p>
+            </div>
+
+            <div class="warning-box">
+                <strong>⚠️ Consignes importantes :</strong>
+                <ul style="margin: 5px 0 0 0; padding-left: 20px;">
+                    <li>Veuillez vous présenter au quai d'embarquement au moins <strong>30 minutes</strong> avant l'heure prévue.</li>
+                    <li>N'oubliez pas l'original de votre pièce d'identité ({{ booking.get_id_type_display }} N° {{ booking.id_number }}).</li>
+                </ul>
+            </div>
+
+            <p>Si vous avez égaré votre billet, n'hésitez pas à nous contacter ou à vous présenter au guichet avec votre pièce d'identité.</p>
+            <p>Bon voyage !</p>
+        </div>
+        <div class="footer">
+            <p>© EasyTravel Cameroun — Plateforme de Billetterie Interurbaine.</p>
+        </div>
+    </div>
+</body>
+</html>

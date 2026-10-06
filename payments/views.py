@@ -15,7 +15,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
 
-from bookings.models import Booking
+from bookings.models import Booking, BookingCart
 from .services.cinetpay import CinetPayService
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,56 @@ def initiate_booking_payment(request, booking_id):
 
     success, result, tx_id = service.initiate_payment(
         booking=booking,
+        return_url=return_url,
+        notify_url=notify_url,
+    )
+
+    if success:
+        return redirect(result['payment_url'])
+    else:
+        messages.error(request, result.get('message', "Erreur d'initialisation du paiement."))
+        return redirect('travel:home')
+
+
+def initiate_cart_payment(request, cart_id):
+    """
+    Initiates payment for an entire BookingCart.
+    """
+    cart = get_object_or_404(BookingCart, id=cart_id)
+
+    # Vérification IDOR : Seul le propriétaire peut payer
+    if cart.user and cart.user != request.user:
+        messages.error(request, "Accès non autorisé à ce panier.")
+        return redirect('travel:home')
+
+    # If already paid, take directly to the first confirmed ticket
+    if cart.payment_status == 'paid':
+        messages.info(request, "Ce panier a déjà été entièrement réglé.")
+        first_booking = cart.bookings.first()
+        if first_booking:
+            return redirect('bookings:confirmation', reference=first_booking.reference)
+        return redirect('accounts:my_bookings')
+
+    simulation_mode = getattr(settings, 'PAYMENT_SIMULATION_MODE', True)
+    service = CinetPayService()
+
+    # Redirection vers le mode Simulation / Sandbox (NON GERE POUR PANIER ICI)
+    if simulation_mode or not service.is_configured():
+        # Fallback to paying the first booking in sandbox
+        first_booking = cart.bookings.first()
+        return redirect('payments:simulation_checkout', booking_id=first_booking.id)
+
+    # Mode CinetPay Réel (Live)
+    return_url = getattr(settings, 'CINETPAY_RETURN_URL', '') or request.build_absolute_uri(reverse('payments:return'))
+    notify_url = getattr(settings, 'CINETPAY_NOTIFY_URL', '') or request.build_absolute_uri(reverse('payments:notification'))
+
+    # Store transaction context in session for return fallback
+    first_booking = cart.bookings.first()
+    if first_booking:
+        request.session['last_payment_booking_ref'] = first_booking.reference
+
+    success, result, tx_id = service.initiate_payment(
+        cart=cart,
         return_url=return_url,
         notify_url=notify_url,
     )
@@ -212,15 +262,22 @@ def cinetpay_return(request):
     booking = None
     if tx_id:
         service = CinetPayService()
-        updated, booking, message = service.verify_and_update_booking(tx_id)
-        if booking:
-            if booking.payment_status == 'paid':
-                messages.success(request, "🎉 Votre paiement a été validé avec succès ! Votre billet est confirmé.")
-            elif booking.payment_status == 'failed':
+        updated, obj, message = service.verify_and_update_booking(tx_id)
+        if obj:
+            if obj.payment_status == 'paid':
+                messages.success(request, "🎉 Votre paiement a été validé avec succès ! Votre(vos) billet(s) est(sont) confirmé(s).")
+            elif obj.payment_status == 'failed':
                 messages.error(request, "Le paiement a été interrompu ou refusé par l'opérateur. Vous pouvez réessayer.")
             else:
                 messages.info(request, "Votre transaction est en cours de finalisation par votre opérateur Mobile Money.")
-            return redirect('bookings:confirmation', reference=booking.reference)
+            
+            if hasattr(obj, 'bookings'): # It's a Cart
+                first = obj.bookings.first()
+                if first:
+                    return redirect('bookings:confirmation', reference=first.reference)
+                return redirect('accounts:my_bookings')
+            else:
+                return redirect('bookings:confirmation', reference=obj.reference)
 
     # Fallback to session reference if available
     ref = request.session.get('last_payment_booking_ref')
