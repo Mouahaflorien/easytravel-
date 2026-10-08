@@ -5,6 +5,10 @@ from django.conf.urls.static import static
 
 from . import pwa
 
+admin.site.site_header = "Administration Mslogitech"
+admin.site.site_title = "Admin Mslogitech"
+admin.site.index_title = "Bienvenue sur le portail d'administration Mslogitech"
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('manifest.json', pwa.manifest_view, name='pwa_manifest'),
