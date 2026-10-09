@@ -445,3 +445,12 @@ class AgencyBookingForm(forms.ModelForm):
 
         return cleaned_data
 
+
+class LineForm(forms.ModelForm):
+    class Meta:
+        model = Line
+        fields = ['name', 'base_price']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'base_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '100', 'min': '0'}),
+        }

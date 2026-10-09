@@ -30,7 +30,8 @@ class GeminiAuditService:
 
     def __init__(self, agency=None):
         self.agency = agency
-        self.gemini_api_key = getattr(settings, 'GEMINI_API_KEY', os.environ.get('GEMINI_API_KEY', ''))
+        self.gemini_api_key = getattr(settings, 'GEMINI_API_KEY', os.environ.get('GEMINI_API_KEY', '')).strip()
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={self.gemini_api_key}"
 
     def run_audit_async(self, callback=None):
         """

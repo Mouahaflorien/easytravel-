@@ -115,8 +115,7 @@ def search(request):
         if dep.line_id in start_stops_by_line and dep.line_id in end_stops_by_line:
             s_stop = start_stops_by_line[dep.line_id]
             e_stop = end_stops_by_line[dep.line_id]
-            diff = e_stop.price_from_start - s_stop.price_from_start
-            base_price = diff if diff > 0 else (e_stop.price_from_start if e_stop.price_from_start > 0 else 5000)
+            base_price = dep.line.base_price
             dep.segment_start_stop = s_stop
             dep.segment_end_stop = e_stop
         else:

@@ -151,59 +151,73 @@ class CinetPayService:
         """
         from bookings.models import BookingCart
         
+        from django.db import transaction
         is_cart = transaction_id.startswith('ET-CRT-')
-        obj = None
-        
-        if is_cart:
-            obj = BookingCart.objects.filter(transaction_id=transaction_id).first()
-            if not obj:
-                logger.warning(f"Cart not found for transaction_id={transaction_id}")
-                return False, None, "Panier introuvable."
-            if obj.payment_status == 'paid':
-                return True, obj, "Panier déjà réglé et confirmé."
-        else:
-            obj = Booking.objects.filter(transaction_id=transaction_id).first()
-            if not obj:
-                logger.warning(f"Booking not found for transaction_id={transaction_id}")
-                return False, None, "Réservation introuvable."
-            if obj.payment_status == 'paid':
-                return True, obj, "Réservation déjà réglée et confirmée."
 
-        success, check_data = self.check_payment(transaction_id)
-        if success:
-            data_info = check_data.get('data', {})
-            status = str(data_info.get('status', '')).upper()
-            operator = data_info.get('operator_id') or data_info.get('payment_method') or 'cinetpay'
-
-            if status == 'ACCEPTED':
-                obj.payment_status = 'paid'
-                if not is_cart:
-                    obj.payment_method = 'online'
-                    obj.payment_operator = str(operator)
-                    obj.status = 'confirmed'
-                    obj.paid_at = timezone.now()
-                    obj.save(update_fields=['payment_status', 'payment_method', 'payment_operator', 'status', 'paid_at'])
-                else:
-                    obj.save(update_fields=['payment_status'])
-                    # Update all bookings in cart
-                    for b in obj.bookings.all():
-                        b.payment_status = 'paid'
-                        b.payment_method = 'online'
-                        b.payment_operator = str(operator)
-                        b.status = 'confirmed'
-                        b.paid_at = timezone.now()
-                        b.save(update_fields=['payment_status', 'payment_method', 'payment_operator', 'status', 'paid_at'])
-
-                logger.info(f"Payment {transaction_id} successfully marked as PAID via CinetPay ({operator}).")
-                return True, obj, "Paiement validé avec succès."
-                
-            elif status in ('REFUSED', 'FAILED', 'CANCELLED'):
-                obj.payment_status = 'failed'
-                obj.save(update_fields=['payment_status'])
-                if is_cart:
-                    obj.bookings.update(payment_status='failed')
-                return False, obj, f"Paiement refusé ou annulé ({status})."
+        with transaction.atomic():
+            if is_cart:
+                obj = BookingCart.objects.select_for_update().filter(transaction_id=transaction_id).first()
+                if not obj:
+                    logger.warning(f"Cart not found for transaction_id={transaction_id}")
+                    return False, None, "Panier introuvable."
+                if obj.payment_status == 'paid':
+                    return True, obj, "Panier déjà réglé et confirmé."
             else:
-                return False, obj, f"Paiement en attente de confirmation ({status})."
-        else:
-            return False, obj, "Impossible de vérifier le statut auprès de CinetPay."
+                obj = Booking.objects.select_for_update().filter(transaction_id=transaction_id).first()
+                if not obj:
+                    logger.warning(f"Booking not found for transaction_id={transaction_id}")
+                    return False, None, "Réservation introuvable."
+                if obj.payment_status == 'paid':
+                    return True, obj, "Réservation déjà réglée et confirmée."
+
+            success, check_data = self.check_payment(transaction_id)
+            if success:
+                data_info = check_data.get('data', {})
+                status = str(data_info.get('status', '')).upper()
+                operator = data_info.get('operator_id') or data_info.get('payment_method') or 'cinetpay'
+                
+                # Verify amount and currency
+                pay_amount = int(data_info.get('amount', 0))
+                pay_currency = data_info.get('currency', '')
+                expected_amount = int(obj.total_amount)
+                
+                if status == 'ACCEPTED':
+                    if pay_amount < expected_amount or pay_currency != self.currency:
+                        logger.error(f"Montant/Devise invalide pour {transaction_id}. Reçu: {pay_amount} {pay_currency}, Attendu: {expected_amount} {self.currency}")
+                        obj.payment_status = 'failed'
+                        obj.save(update_fields=['payment_status'])
+                        if is_cart:
+                            obj.bookings.update(payment_status='failed')
+                        return False, obj, "Le montant ou la devise du paiement ne correspondent pas."
+                        
+                    obj.payment_status = 'paid'
+                    if not is_cart:
+                        obj.payment_method = 'online'
+                        obj.payment_operator = str(operator)
+                        obj.status = 'confirmed'
+                        obj.paid_at = timezone.now()
+                        obj.save(update_fields=['payment_status', 'payment_method', 'payment_operator', 'status', 'paid_at'])
+                    else:
+                        obj.save(update_fields=['payment_status'])
+                        # Update all bookings in cart
+                        for b in obj.bookings.all():
+                            b.payment_status = 'paid'
+                            b.payment_method = 'online'
+                            b.payment_operator = str(operator)
+                            b.status = 'confirmed'
+                            b.paid_at = timezone.now()
+                            b.save(update_fields=['payment_status', 'payment_method', 'payment_operator', 'status', 'paid_at'])
+
+                    logger.info(f"Payment {transaction_id} successfully marked as PAID via CinetPay ({operator}).")
+                    return True, obj, "Paiement validé avec succès."
+                    
+                elif status in ('REFUSED', 'FAILED', 'CANCELLED'):
+                    obj.payment_status = 'failed'
+                    obj.save(update_fields=['payment_status'])
+                    if is_cart:
+                        obj.bookings.update(payment_status='failed')
+                    return False, obj, f"Paiement refusé ou annulé ({status})."
+                else:
+                    return False, obj, f"Paiement en attente de confirmation ({status})."
+            else:
+                return False, obj, "Impossible de vérifier le statut auprès de CinetPay."

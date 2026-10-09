@@ -24,9 +24,11 @@ class Booking(models.Model):
         ('cancelled', 'Annulée'),
     )
     ID_TYPE_CHOICES = (
-        ('CNI', "Carte Nationale d'Identité (CNI)"),
-        ('PASSPORT', "Passeport"),
-        ('RECEIPT', "Récépissé de CNI"),
+        ('cni', "Carte Nationale d'Identité (CNI)"),
+        ('passport', "Passeport"),
+        ('school_card', "Carte scolaire"),
+        ('other', "Autre"),
+        ('none', "Aucune pièce"),
     )
     
     PAYMENT_STATUS_CHOICES = (
@@ -49,15 +51,15 @@ class Booking(models.Model):
     departure = models.ForeignKey(Departure, on_delete=models.CASCADE, related_name='bookings')
     
     # Tronçon réservé
-    departure_stop = models.ForeignKey(LineStop, on_delete=models.CASCADE, related_name='departing_bookings', null=True)
-    arrival_stop = models.ForeignKey(LineStop, on_delete=models.CASCADE, related_name='arriving_bookings', null=True)
+    departure_stop = models.ForeignKey(LineStop, on_delete=models.CASCADE, related_name='departing_bookings', null=True, blank=True)
+    arrival_stop = models.ForeignKey(LineStop, on_delete=models.CASCADE, related_name='arriving_bookings', null=True, blank=True)
     
-    # Infos Voyageur & Pièce d'identité (Obligatoire selon réglementation)
+    # Infos Voyageur & Pièce d'identité
     traveler_name = models.CharField(max_length=150, verbose_name="Nom complet du voyageur")
     traveler_phone = models.CharField(max_length=25, verbose_name="Numéro de téléphone camerounais")
-    traveler_email = models.EmailField(verbose_name="Adresse email")
-    id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES, default='CNI', verbose_name="Type de pièce")
-    id_number = models.CharField(max_length=50, default="", verbose_name="Numéro de la pièce d'identité")
+    traveler_email = models.EmailField(blank=True, null=True, verbose_name="Adresse email")
+    id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES, default='none', verbose_name="Type de pièce")
+    id_number = models.CharField(max_length=50, default="", blank=True, null=True, verbose_name="Numéro de la pièce d'identité")
     
     # Détails Réservation & Encaissement
     seats_reserved = models.PositiveIntegerField(default=1)
@@ -67,9 +69,9 @@ class Booking(models.Model):
     platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Frais de service EasyTravel")
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, help_text="Montant total payé par le client (Agence + Frais)")
     
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='confirmed')
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='paid', verbose_name="Statut du paiement")
-    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, default='cash', verbose_name="Mode d'encaissement")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending', verbose_name="Statut du paiement")
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHOD_CHOICES, blank=True, null=True, verbose_name="Mode d'encaissement")
     transaction_id = models.CharField(max_length=100, blank=True, default="", verbose_name="ID Transaction Passerelle")
     payment_operator = models.CharField(max_length=50, blank=True, default="", verbose_name="Opérateur (MTN, Orange, etc.)")
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name="Date d'encaissement")
@@ -87,27 +89,45 @@ class Booking(models.Model):
     def __str__(self):
         return f"Réservation {self.reference} - {self.traveler_name}"
 
+    def cancel(self):
+        from django.db import transaction
+        from travel.models import Departure
+        with transaction.atomic():
+            b = Booking.objects.select_for_update().get(pk=self.pk)
+            if b.status != 'cancelled':
+                b.status = 'cancelled'
+                if b.departure:
+                    dep = Departure.objects.select_for_update().get(pk=b.departure.pk)
+                    dep.available_capacity += b.seats_reserved
+                    dep.save(update_fields=['available_capacity'])
+                b.save(update_fields=['status'])
+                self.status = 'cancelled'
+                return True
+        return False
+
     @classmethod
     def cancel_expired_pending_bookings(cls):
         from django.utils import timezone
+        from django.db import transaction
         from datetime import timedelta
         # On annule les réservations qui sont restées 'pending' plus de 15 minutes
         expiration_time = timezone.now() - timedelta(minutes=15)
         
-        expired_bookings = cls.objects.filter(
-            status__in=['pending', 'confirmed'],
-            payment_status='pending',
-            created_at__lt=expiration_time
-        ).select_related('departure')
-        
-        for booking in expired_bookings:
-            booking.status = 'cancelled'
-            booking.payment_status = 'failed'
-            # Libérer les sièges bloqués
-            if booking.departure:
-                booking.departure.available_capacity += booking.seats_reserved
-                booking.departure.save(update_fields=['available_capacity'])
-            booking.save(update_fields=['status', 'payment_status'])
+        with transaction.atomic():
+            expired_bookings = list(cls.objects.select_for_update().filter(
+                status__in=['pending', 'confirmed'],
+                payment_status='pending',
+                created_at__lt=expiration_time
+            ).select_related('departure'))
+            
+            count = 0
+            for booking in expired_bookings:
+                if booking.cancel():
+                    booking.payment_status = 'failed'
+                    booking.save(update_fields=['payment_status'])
+                    count += 1
+                
+        return count
 
 class BookingFeedback(models.Model):
     booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name='feedback')

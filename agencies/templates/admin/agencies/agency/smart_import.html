@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div id="content-main">
+    <h2>✨ Importation Intelligente par IA (Gemini)</h2>
+    <p>
+        L'IA Gemini analyse votre texte libre, brouillon ou tableau désorganisé et 
+        se charge de créer automatiquement les villes, lignes, chauffeurs, véhicules et départs.
+    </p>
+
+    <form method="POST" enctype="multipart/form-data" style="margin-top: 20px;">
+        {% csrf_token %}
+        
+        <fieldset class="module aligned" style="padding: 20px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 8px;">
+            <div class="form-row">
+                <label for="raw_text" style="font-weight: bold; font-size: 14px;">Collez le texte brut ici (Ex: message WhatsApp, tableau copié) :</label><br>
+                <textarea name="raw_text" id="raw_text" rows="12" style="width: 100%; max-width: 800px; padding: 10px; font-family: monospace;"></textarea>
+                <p class="help" style="margin-top: 5px; color: #666;">
+                    L'IA comprendra le texte même s'il y a des fautes ou si les données sont mélangées.
+                </p>
+            </div>
+
+            <div class="form-row" style="margin-top: 20px;">
+                <label for="upload_file" style="font-weight: bold; font-size: 14px;">Ou importez un fichier (TXT, CSV non formaté) :</label><br>
+                <input type="file" name="upload_file" id="upload_file" accept=".txt,.csv" style="margin-top: 5px;">
+                <p class="help" style="margin-top: 5px; color: #666;">
+                    S'il s'agit d'un PDF, merci d'en copier-coller le texte dans la zone ci-dessus.
+                </p>
+            </div>
+        </fieldset>
+
+        <div class="submit-row" style="margin-top: 20px; text-align: left;">
+            <button type="submit" class="default" style="background-color: #6a1b9a; color: white; padding: 10px 20px; font-size: 16px; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                Lancer l'Analyse IA
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(e) {
+        var btn = this.querySelector('button[type="submit"]');
+        btn.innerHTML = "Analyse Gemini en cours... ⏳";
+        btn.style.opacity = "0.7";
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}

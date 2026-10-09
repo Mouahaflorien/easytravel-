@@ -12,6 +12,8 @@ class BookingFeedbackAdmin(admin.ModelAdmin):
 class BookingAdmin(admin.ModelAdmin):
     list_display = ('reference', 'traveler_name', 'traveler_phone', 'departure', 'seats_reserved', 'status', 'created_at')
     list_filter = ('status', 'payment_status', 'id_type', 'departure__agency', 'created_at')
+    list_select_related = ('departure', 'departure__agency', 'user')
+    raw_id_fields = ('user', 'departure', 'departure_stop', 'arrival_stop')
     search_fields = ('reference', 'traveler_name', 'traveler_phone', 'id_number', 'traveler_email')
     
     # Rendre la référence et les logs de paiement impossibles à modifier
@@ -44,20 +46,16 @@ class BookingAdmin(admin.ModelAdmin):
         for booking in queryset:
             if booking.status != 'cancelled':
                 with transaction.atomic():
-                    # Libérer les places
-                    if booking.departure:
-                        booking.departure.available_capacity += booking.seats_reserved
-                        booking.departure.save(update_fields=['available_capacity'])
-                    
-                    # Créditer l'utilisateur
-                    if booking.user:
-                        booking.user.wallet_balance += booking.total_amount
-                        booking.user.save(update_fields=['wallet_balance'])
-                        
-                    # Mettre à jour la réservation
-                    booking.status = 'cancelled'
-                    booking.payment_status = 'refunded'
-                    booking.save(update_fields=['status', 'payment_status'])
+                    # Libérer les places de façon atomique
+                    if booking.cancel():
+                        # Créditer l'utilisateur
+                        if hasattr(booking.user, 'wallet_balance'):
+                            booking.user.wallet_balance += booking.total_amount
+                            booking.user.save(update_fields=['wallet_balance'])
+                            
+                        # Mettre à jour le statut du paiement (status est déjà mis à jour par cancel())
+                        booking.payment_status = 'refunded'
+                        booking.save(update_fields=['payment_status'])
                     
                 # Envoyer l'email d'annulation
                 send_cancellation_email(booking)

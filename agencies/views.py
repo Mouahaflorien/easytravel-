@@ -11,7 +11,7 @@ from django.db.models import Sum, Q
 from django.utils import timezone
 from .models import Agency, AuditAnomaly, AgencyNotification
 from .context_processors import get_current_agency
-from travel.models import Departure, Vehicle
+from travel.models import Departure, Vehicle, Line
 from bookings.models import Booking
 from .forms import VehicleForm, DepartureForm, AgencySettingsForm, AgencyBookingForm
 from django.contrib.auth.views import LoginView
@@ -524,12 +524,11 @@ def update_booking_status(request, booking_id):
 
     # 1. Mise à jour du statut de réservation
     if new_status in ['confirmed', 'boarded', 'cancelled']:
-        old_status = booking.status
-        booking.status = new_status
-        if old_status != 'cancelled' and new_status == 'cancelled':
-            booking.departure.available_capacity += booking.seats_reserved
-            booking.departure.save(update_fields=['available_capacity'])
-        booking.save(update_fields=['status'])
+        if new_status == 'cancelled':
+            booking.cancel()
+        else:
+            booking.status = new_status
+            booking.save(update_fields=['status'])
         messages.success(request, f"Statut de la réservation {booking.reference} mis à jour : {booking.get_status_display()}.")
 
     # 2. Mise à jour du statut d'encaissement / paiement
@@ -811,11 +810,7 @@ def anomaly_arbitrate(request, pk):
     # Actions opérationnelles optionnelles liées à la décision
     if decision == 'confirmed':
         if action == 'cancel_booking' and anomaly.booking:
-            if anomaly.booking.status != 'cancelled':
-                anomaly.booking.status = 'cancelled'
-                anomaly.booking.departure.available_capacity += anomaly.booking.seats_reserved
-                anomaly.booking.departure.save(update_fields=['available_capacity'])
-                anomaly.booking.save(update_fields=['status'])
+            if anomaly.booking.cancel():
                 action_taken_desc = f"Billet {anomaly.booking.reference} officiellement annulé et {anomaly.booking.seats_reserved} place(s) remise(s) en vente."
         elif action == 'suspend_cashier' and anomaly.cashier:
             anomaly.cashier.is_active = False
@@ -935,3 +930,28 @@ def send_booking_reminder(request, booking_id):
 
 
 
+
+# --- Gestion des Lignes (Prix des trajets) ---
+class LineListView(ManagerRequiredMixin, ListView):
+    model = Line
+    template_name = 'agencies/line_list.html'
+    context_object_name = 'lines'
+
+    def get_queryset(self):
+        agency = get_current_agency(self.request)['current_agency']
+        return Line.objects.filter(agency=agency).order_by('name')
+
+class LineUpdateView(ManagerRequiredMixin, UpdateView):
+    model = Line
+    from .forms import LineForm
+    form_class = LineForm
+    template_name = 'agencies/line_form.html'
+    success_url = reverse_lazy('agencies:line_list')
+
+    def get_queryset(self):
+        agency = get_current_agency(self.request)['current_agency']
+        return Line.objects.filter(agency=agency)
+
+    def form_valid(self, form):
+        messages.success(self.request, 'Le prix du trajet a été mis à jour avec succès.')
+        return super().form_valid(form)

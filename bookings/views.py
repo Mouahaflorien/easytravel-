@@ -7,7 +7,6 @@ from accounts.models import User
 from accounts.validators import (
     validate_cameroon_phone, 
     validate_clean_email, 
-    validate_identity_info,
     validate_passenger_name
 )
 from accounts.services.email_service import send_account_activation_email
@@ -19,32 +18,32 @@ import hashlib
 from io import BytesIO
 from django.contrib import messages
 from django.conf import settings
+from django.db import transaction
 
 
 def book_departure(request, departure_id):
     """
     Vue de réservation d'un voyage :
-    - Si l'utilisateur est connecté : réservation instantanée confirmée.
-    - Si l'utilisateur n'a pas de compte : création du compte en attente (is_active=False) 
-      et envoi immédiat d'un lien d'activation par email requis pour valider le compte et le billet.
+    - Trajet défini automatiquement du premier au dernier arrêt de la ligne.
+    - Réservation sans numéro de CNI obligatoire.
     """
-    # Nettoyage des réservations impayées expirées
-    Booking.cancel_expired_pending_bookings()
-    
     departure = get_object_or_404(
         Departure.objects.select_related('agency', 'line', 'vehicle'), 
         id=departure_id
     )
     
-    start_id = request.GET.get('start') or request.POST.get('start_id')
-    end_id = request.GET.get('end') or request.POST.get('end_id')
+    # Automatisation : Point de départ et d'arrivée
+    start_stop = departure.line.stops.order_by('stop_order').first()
+    end_stop = departure.line.stops.order_by('-stop_order').first()
     
-    if not start_id or not end_id:
+    if not start_stop or not end_stop or start_stop == end_stop:
+        messages.error(request, "Erreur de configuration de la ligne de voyage.")
         return redirect('travel:home')
         
-    start_stop = get_object_or_404(LineStop.objects.select_related('city'), id=start_id)
-    end_stop = get_object_or_404(LineStop.objects.select_related('city'), id=end_id)
-    segment_price = end_stop.price_from_start - start_stop.price_from_start
+    segment_price = departure.line.base_price
+    if segment_price <= 0:
+        messages.error(request, "Tarif calculé invalide.")
+        return redirect('travel:home')
     
     error = None
     is_auth = request.user.is_authenticated
@@ -54,8 +53,7 @@ def book_departure(request, departure_id):
         'name': f"{current_user.first_name} {current_user.last_name}".strip() if current_user else '',
         'email': current_user.email if current_user else '',
         'phone': current_user.phone if current_user else '',
-        'id_type': getattr(current_user, 'id_type', 'CNI') if current_user else 'CNI',
-        'id_number': getattr(current_user, 'id_number', '') if current_user else '',
+        'id_type': getattr(current_user, 'id_type', 'none') if current_user else 'none',
         'seats': 1,
     }
     
@@ -63,8 +61,7 @@ def book_departure(request, departure_id):
         name = request.POST.get('name', '').strip()
         phone_raw = request.POST.get('phone', '').strip()
         email_raw = request.POST.get('email', '').strip()
-        id_type_raw = request.POST.get('id_type', 'CNI').strip()
-        id_number_raw = request.POST.get('id_number', '').strip()
+        id_type_raw = request.POST.get('id_type', 'none').strip()
         password = request.POST.get('password', '')
         password_confirm = request.POST.get('password_confirm', '')
         
@@ -78,148 +75,95 @@ def book_departure(request, departure_id):
             'phone': phone_raw,
             'email': email_raw,
             'id_type': id_type_raw,
-            'id_number': id_number_raw,
             'seats': seats,
         }
         
         try:
-            # 1. Validation stricte du Nom (état civil, au moins 2 mots, sans symboles/mots factices)
             clean_name = validate_passenger_name(name)
-                
-            # 2. Validation stricte du téléphone (Cameroun ou international)
             clean_phone = validate_cameroon_phone(phone_raw)
             
-            # 3. Validation stricte de l'email
-            clean_email = validate_clean_email(email_raw)
-            
-            # 4. Validation obligatoire de la pièce d'identité (CNI / Passeport / Récépissé)
-            clean_id_type, clean_id_number = validate_identity_info(id_type_raw, id_number_raw)
-            
-            # 5. Vérification de la disponibilité
-            if seats < 1:
-                raise ValidationError("Vous devez réserver au moins 1 place.")
-            if seats > departure.available_capacity:
-                raise ValidationError(f"Capacité insuffisante : il ne reste que {departure.available_capacity} place(s) disponible(s).")
+            # Email is optional. If provided, validate it. Otherwise, create a placeholder for account creation.
+            if email_raw:
+                clean_email = validate_clean_email(email_raw)
+            else:
+                # Generate a unique placeholder email using the clean phone number
+                clean_email = f"user_{clean_phone.replace(' ', '').replace('+', '')}@easytravel.local"
                 
-            agency_amount = segment_price * seats
-            from decimal import Decimal
-            percent = departure.agency.platform_fee_percentage if hasattr(departure.agency, 'platform_fee_percentage') else Decimal('3.00')
-            platform_fee_percent = Decimal(str(percent)) / Decimal('100.0')
-            platform_fee = agency_amount * platform_fee_percent
-            total_amount = agency_amount + platform_fee
-
+            clean_id_number = "" # On ne stocke plus le numéro
+            
             with transaction.atomic():
-                target_user = request.user if is_auth else None
+                departure.refresh_from_db()
+                if departure.available_capacity < seats:
+                    raise ValidationError(f"Désolé, il ne reste que {departure.available_capacity} places.")
                 
+                # Gestion Utilisateur
                 if not is_auth:
-                    if len(password) < 6:
-                        raise ValidationError("Veuillez choisir un mot de passe d'au moins 6 caractères pour sécuriser votre compte voyageur.")
-                    if password != password_confirm:
-                        raise ValidationError("Les mots de passe saisis ne correspondent pas.")
-                    existing_user = User.objects.filter(email__iexact=clean_email).first()
-                    if existing_user and existing_user.is_active:
-                        raise ValidationError("Cette adresse email est déjà liée à un compte actif. Veuillez vous connecter avec vos identifiants pour continuer.")
+                    if User.objects.filter(phone=clean_phone).exists():
+                        raise ValidationError("Ce numéro de téléphone est déjà associé à un compte. Veuillez vous connecter.")
                     
-                    name_parts = clean_name.split(' ', 1)
-                    first_name = name_parts[0]
-                    last_name = name_parts[1] if len(name_parts) > 1 else ''
-
-                    if existing_user:
-                        target_user = existing_user
-                        target_user.set_password(password)
-                        target_user.first_name = first_name
-                        target_user.last_name = last_name
-                        target_user.phone = clean_phone
-                        target_user.id_type = clean_id_type
-                        target_user.id_number = clean_id_number
-                        target_user.save()
-                    else:
-                        username_base = clean_email.split('@')[0]
-                        username = username_base
-                        count = 1
-                        while User.objects.filter(username=username).exists():
-                            username = f"{username_base}{count}"
-                            count += 1
-                        target_user = User.objects.create_user(
-                            username=username, email=clean_email, password=password,
-                            first_name=first_name, last_name=last_name, phone=clean_phone,
-                            id_type=clean_id_type, id_number=clean_id_number,
-                            role='traveler', is_active=False
-                        )
-                else:
-                    user_updated = False
-                    if not target_user.phone and clean_phone:
-                        target_user.phone = clean_phone
-                        user_updated = True
-                    if not target_user.id_number and clean_id_number:
-                        target_user.id_type = clean_id_type
-                        target_user.id_number = clean_id_number
-                        user_updated = True
-                    if user_updated:
-                        target_user.save()
-
-                from bookings.models import BookingCart
-                cart = None
-                if seats > 1:
-                    cart = BookingCart.objects.create(user=target_user, total_amount=total_amount)
-
-                first_booking = None
-                for i in range(1, seats + 1):
-                    t_name = clean_name if i == 1 else request.POST.get(f'traveler_name_{i}', f"{clean_name} (Accompagnant {i})")
-                    t_id_type = clean_id_type if i == 1 else request.POST.get(f'id_type_{i}', clean_id_type)
-                    t_id_number = clean_id_number if i == 1 else request.POST.get(f'id_number_{i}', 'Non spécifié')
-
-                    b = Booking.objects.create(
-                        cart=cart,
-                        user=target_user,
-                        departure=departure,
-                        departure_stop=start_stop,
-                        arrival_stop=end_stop,
-                        traveler_name=t_name,
-                        traveler_phone=clean_phone,
-                        traveler_email=clean_email,
-                        id_type=t_id_type,
-                        id_number=t_id_number,
-                        seats_reserved=1,
-                        agency_amount=agency_amount / seats,
-                        platform_fee=platform_fee / seats,
-                        total_amount=total_amount / seats,
-                        status='confirmed' if is_auth else 'pending',
-                        payment_status='pending',
-                        payment_method='online'
+                    # Generate a random 6-character password for the user
+                    import random
+                    import string
+                    generated_password = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
+                    
+                    user = User.objects.create_user(
+                        phone=clean_phone,
+                        password=generated_password,
+                        first_name=clean_name.split()[0],
+                        last_name=' '.join(clean_name.split()[1:]) if len(clean_name.split()) > 1 else "",
+                        email=clean_email,
+                        id_type=id_type_raw,
+                        id_number=clean_id_number,
+                        is_active=False
                     )
-                    if i == 1:
-                        first_booking = b
-
+                    
+                    # Remplacement Email -> WhatsApp pour l'activation
+                    try:
+                        from accounts.services.whatsapp_service import send_whatsapp_activation
+                        send_whatsapp_activation(user, request)
+                    except Exception as e:
+                        print("Erreur envoi whatsapp:", e)
+                        pass
+                        
+                    messages.success(request, "Un message WhatsApp d'activation vous a été envoyé. Le billet est réservé.")
+                else:
+                    user = current_user
+                
+                # Création Réservation
+                booking = Booking.objects.create(
+                    user=user,
+                    departure=departure,
+                    departure_stop=start_stop,
+                    arrival_stop=end_stop,
+                    traveler_name=clean_name,
+                    traveler_phone=clean_phone,
+                    traveler_email=clean_email,
+                    id_type=id_type_raw,
+                    id_number=clean_id_number,
+                    seats_reserved=seats,
+                    total_amount=segment_price * seats,
+                    payment_status='pending',
+                    status='pending'
+                )
+                
                 departure.available_capacity -= seats
                 departure.save()
-
-            if is_auth:
-                return redirect('bookings:confirmation', reference=first_booking.reference)
-            else:
-                confirmation_url = reverse('bookings:confirmation', kwargs={'reference': first_booking.reference})
-                send_account_activation_email(request, target_user, next_url=confirmation_url, booking=first_booking)
-                request.session['activation_email'] = clean_email
-                request.session['pending_booking_ref'] = first_booking.reference
-                return redirect(f"{reverse('accounts:activation_pending')}?booking={first_booking.reference}&email={quote(clean_email)}")
-            
+                
+                return redirect(reverse('bookings:checkout', args=[booking.reference]))
+                
         except ValidationError as e:
-            error = e.message if hasattr(e, 'message') else str(e)
+            error = e.message
+            messages.error(request, error)
             
     return render(request, 'bookings/book.html', {
-        'departure': departure, 
-        'start_stop': start_stop, 
-        'end_stop': end_stop, 
+        'departure': departure,
+        'start_stop': start_stop,
+        'end_stop': end_stop,
         'segment_price': segment_price,
         'form_data': form_data,
         'error': error,
     })
 
-
-
-from django.views.decorators.clickjacking import xframe_options_sameorigin
-
-@xframe_options_sameorigin
 def booking_confirmation(request, reference):
     booking = get_object_or_404(
         Booking.objects.select_related(
@@ -280,6 +224,11 @@ def booking_feedback_view(request, reference):
     """Vue pour recueillir la note de satisfaction du voyageur"""
     from .models import BookingFeedback
     booking = get_object_or_404(Booking, reference=reference)
+    
+    # Vérification IDOR : Seul le propriétaire peut laisser un avis
+    if booking.user and booking.user != request.user:
+        messages.error(request, "Accès non autorisé à cette réservation.")
+        return redirect('travel:home')
     
     # Si un sondage a déjà été soumis pour ce billet, on affiche un message
     if hasattr(booking, 'feedback'):

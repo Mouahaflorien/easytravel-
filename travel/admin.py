@@ -14,7 +14,7 @@ class CityAdmin(admin.ModelAdmin):
 
 @admin.register(Line)
 class LineAdmin(admin.ModelAdmin):
-    list_display = ('name', 'agency', 'departure_city', 'arrival_city')
+    list_display = ('name', 'agency', 'departure_city', 'arrival_city', 'base_price')
     list_filter = ('agency',)
     search_fields = ('name', 'agency__name')
     inlines = [LineStopInline]
@@ -41,4 +41,6 @@ class DriverAdmin(admin.ModelAdmin):
 class DepartureAdmin(admin.ModelAdmin):
     list_display = ('line', 'agency', 'date', 'time', 'status', 'available_capacity', 'vehicle', 'driver')
     list_filter = ('status', 'agency', 'date')
+    list_select_related = ('line', 'agency', 'vehicle', 'driver')
+    raw_id_fields = ('line', 'agency', 'vehicle', 'driver')
     search_fields = ('line__name', 'agency__name')

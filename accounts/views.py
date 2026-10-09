@@ -5,6 +5,17 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.exceptions import ValidationError
+from django.utils.http import url_has_allowed_host_and_scheme
+
+def get_safe_next_url(request, default='travel:home'):
+    next_url = request.GET.get('next') or request.POST.get('next')
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, 
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure()
+    ):
+        return next_url
+    return default
 
 from .models import User
 from .validators import (
@@ -13,11 +24,12 @@ from .validators import (
     validate_identity_info,
     validate_passenger_name
 )
-from .services.email_service import send_account_activation_email, verify_activation_token
+from .services.whatsapp_service import send_whatsapp_activation
+from .services.email_service import verify_activation_token
 from bookings.models import Booking
 
 def traveler_login(request):
-    next_url = request.GET.get('next') or request.POST.get('next') or 'travel:home'
+    next_url = get_safe_next_url(request)
     
     if request.user.is_authenticated:
         if next_url and next_url != 'travel:home':
@@ -66,7 +78,7 @@ def traveler_login(request):
 
 
 def traveler_register(request):
-    next_url = request.GET.get('next') or request.POST.get('next') or 'travel:home'
+    next_url = get_safe_next_url(request)
     
     if request.user.is_authenticated:
         return redirect(next_url)
@@ -201,7 +213,7 @@ def activate_account(request, uidb64, token):
             return redirect('bookings:confirmation', reference=last_confirmed_booking.reference)
 
         # Si l'utilisateur avait une URL de redirection (ex: finaliser une réservation)
-        next_url = request.GET.get('next')
+        next_url = get_safe_next_url(request, default=None)
         if next_url and next_url != 'travel:home':
             return redirect(next_url)
 

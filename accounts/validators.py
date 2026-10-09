@@ -56,14 +56,12 @@ def validate_passenger_name(name_raw):
         raise ValidationError("Le nom ne doit contenir que des lettres alphabétiques, tirets et apostrophes (chiffres et symboles interdits).")
 
     words = cleaned.split(' ')
-    if len(words) < 2:
-        raise ValidationError("Veuillez renseigner à la fois le Nom et le Prénom (ex: Kamgaing Jean-Paul).")
 
     for w in words:
         # Nettoyer les tirets/apostrophes pour compter les lettres
         letters_only = re.sub(r"[^A-Za-zÀ-ÿ]", "", w)
         if len(letters_only) < 2:
-            raise ValidationError(f"Chaque partie du nom doit comporter au moins 2 lettres (partie invalide : '{w}').")
+            raise ValidationError(f"Le nom doit comporter au moins 2 lettres (partie invalide : '{w}').")
 
     # Vérification anti-fraude / anti-test
     lower_val = cleaned.lower()

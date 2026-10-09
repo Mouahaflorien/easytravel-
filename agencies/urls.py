@@ -8,6 +8,11 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(next_page='agencies:login'), name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
     
+
+    # Lines (Trajets)
+    path('trajets/', views.LineListView.as_view(), name='line_list'),
+    path('trajets/<int:pk>/modifier/', views.LineUpdateView.as_view(), name='line_update'),
+    
     # Vehicles
     path('vehicules/', views.VehicleListView.as_view(), name='vehicle_list'),
     path('vehicules/nouveau/', views.VehicleCreateView.as_view(), name='vehicle_create'),

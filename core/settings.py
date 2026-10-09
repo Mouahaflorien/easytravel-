@@ -17,12 +17,15 @@ load_dotenv(BASE_DIR / '.env')
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-SECRET_KEY = os.getenv(
-    'DJANGO_SECRET_KEY',
-    'django-insecure-%ahw%i$r@=@rr04(c5ew#t90$ick)e_jf0q2p8#k*8)$5t4q^2'
-)
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 't', 'yes')
 
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 't', 'yes')
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "dev-only-key"
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("DJANGO_SECRET_KEY est obligatoire en production.")
 
 hosts_env = os.getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost,testserver')
 ALLOWED_HOSTS = [h.strip() for h in hosts_env.split(',') if h.strip()]
@@ -217,7 +220,7 @@ CAMPAY_APP_PASSWORD = os.getenv('CAMPAY_APP_PASSWORD', '')
 CAMPAY_ENVIRONMENT = os.getenv('CAMPAY_ENVIRONMENT', 'sandbox')
 
 # Payment Simulation & Sandbox Mode (True by default for tests & demo)
-PAYMENT_SIMULATION_MODE = os.getenv('PAYMENT_SIMULATION_MODE', 'True').lower() in ('true', '1', 't')
+PAYMENT_SIMULATION_MODE = DEBUG and os.getenv('PAYMENT_SIMULATION_MODE', 'False').lower() in ('true', '1', 't', 'yes')
 
 
 # --- FEES & COMMISSIONS ---

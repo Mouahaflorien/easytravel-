@@ -5,6 +5,11 @@
     {{ block.super }}
     {% if original %}
         <li>
+            <a href="{% url 'admin:agency-smart-import' original.pk %}" class="historylink" style="background-color: #6a1b9a; color: white;">
+                ✨ Import Intelligent IA (Gemini)
+            </a>
+        </li>
+        <li>
             <a href="{% url 'admin:agency-import-csv' original.pk %}" class="historylink" style="background-color: #4CAF50; color: white;">
                 Importer des données (CSV)
             </a>

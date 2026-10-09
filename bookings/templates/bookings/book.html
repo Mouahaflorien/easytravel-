@@ -76,6 +76,45 @@
                         </div>
                     </div>
 
+                    <!-- 1bis. Contact (Téléphone et Email) -->
+                    <div class="mb-4 row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-dark mb-1" for="phoneInput">
+                                Numéro de téléphone <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <select id="phoneCountrySelect" class="form-select bg-light border-end-0 py-2.5" style="max-width: 90px;">
+                                    <option value="+237" selected>🇨🇲 +237</option>
+                                    <option value="+33">🇫🇷 +33</option>
+                                    <option value="+49">🇩🇪 +49</option>
+                                </select>
+                                <input type="tel" name="phone" id="phoneInput" class="form-control py-2.5" 
+                                       placeholder="6XX XXX XXX" 
+                                       value="{{ form_data.phone }}" required>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted" style="font-size: 0.75rem;">Pour recevoir le SMS de confirmation.</small>
+                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="phoneValidHint">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold small text-dark mb-1" for="emailInput">
+                                Adresse email <span class="text-muted fw-normal">(Optionnel)</span>
+                            </label>
+                            <input type="email" name="email" id="emailInput" class="form-control py-2.5 rounded-3" 
+                                   placeholder="ex: voyageur@email.com" 
+                                   value="{{ form_data.email }}">
+                            <div class="d-flex justify-content-between align-items-center mt-1">
+                                <small class="text-muted" style="font-size: 0.75rem;">Pour recevoir votre billet par email.</small>
+                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="emailValidHint">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 2. Pièce d'Identité Officielle (Réglementation transport) -->
                     <div class="mb-4 p-3 bg-light rounded-3 border">
                         <div class="d-flex align-items-center justify-content-between mb-2">
@@ -86,81 +125,26 @@
                                     <line x1="15" y1="8" x2="17" y2="8"></line>
                                     <line x1="15" y1="12" x2="17" y2="12"></line>
                                 </svg>
-                                <span>Pièce d'Identité <span class="text-danger">*</span></span>
-                            </span>
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary" style="font-size: 0.7rem;">
-                                Contrôle obligatoire
+                                <span>Identification du Voyageur</span>
                             </span>
                         </div>
                         
                         <div class="row g-2">
-                            <div class="col-sm-5">
-                                <label class="form-label small text-muted mb-1">Type de document</label>
+                            <div class="col-12">
+                                <label class="form-label small text-muted mb-1">Type de document en votre possession</label>
                                 <select name="id_type" id="idTypeSelect" class="form-select py-2 rounded-3 bg-white" required>
-                                    <option value="CNI" {% if form_data.id_type == 'CNI' %}selected{% endif %}>Carte d'Identité (CNI)</option>
-                                    <option value="PASSPORT" {% if form_data.id_type == 'PASSPORT' %}selected{% endif %}>Passeport</option>
-                                    <option value="RECEIPT" {% if form_data.id_type == 'RECEIPT' %}selected{% endif %}>Récépissé de CNI</option>
+                                    <option value="cni" {% if form_data.id_type == 'cni' %}selected{% endif %}>Carte d'Identité (CNI)</option>
+                                    <option value="passport" {% if form_data.id_type == 'passport' %}selected{% endif %}>Passeport</option>
+                                    <option value="school_card" {% if form_data.id_type == 'school_card' %}selected{% endif %}>Carte scolaire</option>
+                                    <option value="other" {% if form_data.id_type == 'other' %}selected{% endif %}>Autre</option>
+                                    <option value="none" {% if form_data.id_type == 'none' %}selected{% endif %}>Aucune pièce</option>
                                 </select>
                             </div>
-                            <div class="col-sm-7">
-                                <label class="form-label small text-muted mb-1" for="idNumberInput">Numéro de la pièce</label>
-                                <input type="text" name="id_number" id="idNumberInput" class="form-control py-2 rounded-3 bg-white" 
-                                       placeholder="ex: 102938475" 
-                                       value="{{ form_data.id_number }}" required>
-                            </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <small class="text-muted" style="font-size: 0.74rem;">La pièce originale sera contrôlée avant la montée dans le bus.</small>
-                            <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="idValidHint">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                <span>Numéro valide</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- 3. Coordonnées de Contact (Téléphone & Email alignés) -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-sm-6">
-                            <label class="form-label fw-bold small text-dark mb-1" for="phoneInput">
-                                Téléphone Mobile <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <select id="phoneCountrySelect" class="form-select bg-light fw-medium border-end-0" style="max-width: 125px; font-size: 0.85rem;">
-                                    <option value="+237" selected>CM +237</option>
-                                    <option value="+49">DE +49</option>
-                                    <option value="+33">FR +33</option>
-                                    <option value="+32">BE +32</option>
-                                    <option value="+1">US +1</option>
-                                    <option value="+44">UK +44</option>
-                                    <option value="+">Autre</option>
-                                </select>
-                                <input type="tel" name="phone" id="phoneInput" class="form-control py-2" 
-                                       placeholder="6XX XXX XXX" 
-                                       value="{{ form_data.phone }}" required>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <small class="text-muted" style="font-size: 0.74rem;">SMS de confirmation envoyé ici.</small>
-                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="phoneValidHint">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    <span>Numéro valide</span>
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="col-sm-6">
-                            <label class="form-label fw-bold small text-dark mb-1" for="emailInput">
-                                Adresse Email <span class="text-danger">*</span>
-                            </label>
-                            <input type="email" name="email" id="emailInput" class="form-control py-2 rounded-3" 
-                                   placeholder="exemple@domaine.com" 
-                                   value="{{ form_data.email }}" required>
-                            <div class="d-flex justify-content-between align-items-center mt-1">
-                                <small class="text-muted" style="font-size: 0.74rem;">Votre e-billet PDF y sera délivré.</small>
-                                <span class="small text-success d-none fw-medium d-inline-flex align-items-center gap-1" id="emailValidHint">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    <span>Email valide</span>
-                                </span>
-                            </div>
+                        <div class="d-flex mt-2 p-2 bg-warning bg-opacity-10 rounded border border-warning">
+                            <small class="text-dark fw-medium" style="font-size: 0.8rem;">
+                                ⚠️ <strong>Important :</strong> Vous êtes l'unique responsable de votre situation lors des contrôles de police sur le trajet. Assurez-vous d'avoir les pièces nécessaires.
+                            </small>
                         </div>
                     </div>
 
@@ -184,7 +168,7 @@
                     <div id="additionalPassengersContainer"></div>
 
                     {% if not user.is_authenticated %}
-                    <!-- 4bis. Création de compte voyageur (Requis pour authentification du billet) -->
+                    <!-- 4bis. Création de compte automatique -->
                     <div class="mb-4 p-3 bg-light rounded-3 border">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="fw-bold small text-dark d-flex align-items-center gap-1.5">
@@ -192,25 +176,15 @@
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                                 </svg>
-                                <span>Création de votre compte voyageur <span class="text-danger">*</span></span>
+                                <span>Création automatique du compte</span>
                             </span>
                             <a href="{% url 'accounts:login' %}?next={{ request.get_full_path|urlencode }}" class="small text-primary fw-semibold text-decoration-none">
                                 Déjà un compte ? Se connecter
                             </a>
                         </div>
-                        <p class="small text-muted mb-3">
-                            Pour des raisons de conformité et de sécurité des transports, un compte voyageur est requis. Un <strong>lien d'authentification vous sera envoyé par email</strong> pour valider votre compte et confirmer votre billet.
+                        <p class="small text-muted mb-0">
+                            Un compte voyageur sécurisé sera automatiquement créé pour vous. Un <strong>lien et un mot de passe</strong> vous seront envoyés pour accéder à votre billet à tout moment.
                         </p>
-                        <div class="row g-2">
-                            <div class="col-sm-6">
-                                <label class="form-label small text-muted mb-1" for="bookPassword">Mot de passe <span class="text-danger">*</span></label>
-                                <input type="password" name="password" id="bookPassword" class="form-control py-2 rounded-3 bg-white" placeholder="6+ caractères" required>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label small text-muted mb-1" for="bookPasswordConfirm">Confirmer le mot de passe <span class="text-danger">*</span></label>
-                                <input type="password" name="password_confirm" id="bookPasswordConfirm" class="form-control py-2 rounded-3 bg-white" placeholder="Répéter mot de passe" required>
-                            </div>
-                        </div>
                     </div>
                     {% endif %}
 
@@ -595,22 +569,7 @@
                         
                         <div class="mb-3">
                             <label class="form-label fw-bold small text-dark mb-1">Nom Complet <span class="text-danger">*</span></label>
-                            <input type="text" name="traveler_name_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="Nom sur la pièce d'identité" required>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-sm-5">
-                                <label class="form-label fw-bold small text-dark mb-1">Type de Pièce <span class="text-danger">*</span></label>
-                                <select name="id_type_${i}" class="form-select py-2 rounded-3 bg-white" required>
-                                    <option value="CNI" selected>CNI</option>
-                                    <option value="PASSPORT">Passeport</option>
-                                    <option value="RECEIPT">Récépissé</option>
-                                </select>
-                            </div>
-                            <div class="col-sm-7">
-                                <label class="form-label fw-bold small text-dark mb-1">Numéro de la Pièce <span class="text-danger">*</span></label>
-                                <input type="text" name="id_number_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="N° complet" required>
-                            </div>
+                            <input type="text" name="traveler_name_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="Nom et Prénom du passager" required>
                         </div>
                     </div>
                 `;

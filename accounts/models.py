@@ -14,6 +14,7 @@ class User(AbstractUser):
         ('RECEIPT', "Récépissé de CNI"),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='traveler')
+    email = models.EmailField('email address', unique=True)
     phone = models.CharField(max_length=25, blank=True)
     id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES, default='CNI', blank=True)
     id_number = models.CharField(max_length=50, blank=True)

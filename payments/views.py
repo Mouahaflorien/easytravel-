@@ -11,6 +11,8 @@ from django.urls import reverse
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.http import Http404
 from django.contrib import messages
 from django.conf import settings
 from django.utils import timezone
@@ -92,6 +94,8 @@ def initiate_cart_payment(request, cart_id):
     if simulation_mode or not service.is_configured():
         # Fallback to paying the first booking in sandbox
         first_booking = cart.bookings.first()
+        if not first_booking:
+            return redirect('accounts:my_bookings')
         return redirect('payments:simulation_checkout', booking_id=first_booking.id)
 
     # Mode CinetPay Réel (Live)
@@ -115,7 +119,9 @@ def initiate_cart_payment(request, cart_id):
     else:
         error_msg = result.get('message', "Une erreur est survenue lors de l'initialisation du paiement.")
         messages.error(request, f"Paiement en ligne indisponible : {error_msg}")
-        return redirect('bookings:confirmation', reference=booking.reference)
+        if first_booking:
+            return redirect('bookings:confirmation', reference=first_booking.reference)
+        return redirect('accounts:my_bookings')
 
 
 def simulation_checkout(request, booking_id):
@@ -153,13 +159,17 @@ def simulation_checkout(request, booking_id):
     })
 
 
+@login_required
 @require_POST
 def simulation_process(request, booking_id):
     """
     Processes simulated payments (either successful or failed) for testing.
     Updates booking status, generates transaction ID and sends confirmation email.
     """
-    booking = get_object_or_404(Booking, id=booking_id)
+    if not settings.PAYMENT_SIMULATION_MODE:
+        raise Http404("Simulation de paiement désactivée.")
+        
+    booking = get_object_or_404(Booking, id=booking_id, user=request.user)
 
     action = request.POST.get('action', 'success')
     payment_method = request.POST.get('payment_method', 'mtn_momo')
@@ -174,13 +184,30 @@ def simulation_process(request, booking_id):
 
     if action == 'success':
         tx_id = f"SIM-TX-{booking.id}-{uuid.uuid4().hex[:8].upper()}"
-        booking.payment_status = 'paid'
-        booking.payment_method = payment_method
-        booking.payment_operator = f"{operator_name} (Simulation)"
-        booking.transaction_id = tx_id
-        booking.status = 'confirmed'
-        booking.paid_at = timezone.now()
-        booking.save()
+        
+        from django.db import transaction
+        with transaction.atomic():
+            if booking.cart:
+                cart_bookings = Booking.objects.filter(cart=booking.cart)
+                for b in cart_bookings:
+                    b.payment_status = 'paid'
+                    b.payment_method = payment_method
+                    b.payment_operator = f"{operator_name} (Simulation)"
+                    b.transaction_id = tx_id
+                    b.status = 'confirmed'
+                    b.paid_at = timezone.now()
+                    b.save()
+                booking.cart.payment_status = 'paid'
+                booking.cart.transaction_id = tx_id
+                booking.cart.save(update_fields=['payment_status', 'transaction_id'])
+            else:
+                booking.payment_status = 'paid'
+                booking.payment_method = payment_method
+                booking.payment_operator = f"{operator_name} (Simulation)"
+                booking.transaction_id = tx_id
+                booking.status = 'confirmed'
+                booking.paid_at = timezone.now()
+                booking.save()
 
         # Send ticket confirmation email
         try:
@@ -197,8 +224,15 @@ def simulation_process(request, booking_id):
         return redirect('bookings:confirmation', reference=booking.reference)
 
     else:
-        booking.payment_status = 'failed'
-        booking.save(update_fields=['payment_status'])
+        from django.db import transaction
+        with transaction.atomic():
+            if booking.cart:
+                Booking.objects.filter(cart=booking.cart).update(payment_status='failed')
+                booking.cart.payment_status = 'failed'
+                booking.cart.save(update_fields=['payment_status'])
+            else:
+                booking.payment_status = 'failed'
+                booking.save(update_fields=['payment_status'])
         messages.error(
             request,
             f"❌ Simulation : La transaction via {operator_name} a été refusée ou interrompue (Solde insuffisant / Annulation USSD). Vous pouvez retenter le règlement."
@@ -232,7 +266,7 @@ def cinetpay_notification(request):
     )
 
     if not tx_id:
-        logger.warning(f"CinetPay IPN received without transaction identifier: {data}")
+        logger.warning("CinetPay IPN received without transaction identifier.")
         return HttpResponseBadRequest("Missing transaction_id")
 
     logger.info(f"Received CinetPay IPN for transaction_id: {tx_id}")

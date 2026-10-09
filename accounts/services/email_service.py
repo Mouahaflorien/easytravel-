@@ -1,4 +1,5 @@
 import logging
+import threading
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -11,6 +12,11 @@ from accounts.models import User
 from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
+
+def send_mail_async(*args, **kwargs):
+    thread = threading.Thread(target=send_mail, args=args, kwargs=kwargs)
+    thread.start()
+
 
 
 def generate_activation_link(request, user, next_url=None):
@@ -60,7 +66,7 @@ def send_account_activation_email(request, user, next_url=None, booking=None):
 
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
         
-        send_mail(
+        send_mail_async(
             subject=subject,
             message=text_message,
             from_email=from_email,
@@ -189,7 +195,7 @@ def send_trip_reminder_email(booking):
         text_message = render_to_string('accounts/emails/trip_reminder_email.txt', context)
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
 
-        send_mail(
+        send_mail_async(
             subject=subject,
             message=text_message,
             from_email=from_email,
@@ -232,7 +238,7 @@ def send_satisfaction_survey_email(request, booking):
         text_message = render_to_string('accounts/emails/satisfaction_survey_email.txt', context)
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
 
-        send_mail(
+        send_mail_async(
             subject=subject,
             message=text_message,
             from_email=from_email,
@@ -270,7 +276,7 @@ def send_missed_trip_email(booking):
         text_message = render_to_string('accounts/emails/missed_trip_email.txt', context)
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
 
-        send_mail(
+        send_mail_async(
             subject=subject,
             message=text_message,
             from_email=from_email,
@@ -307,7 +313,7 @@ def send_cancellation_email(booking):
         text_message = render_to_string('accounts/emails/cancellation_email.txt', context)
         from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'EasyTravel <noreply@easytravel.mslogitech.com>')
 
-        send_mail(
+        send_mail_async(
             subject=subject,
             message=text_message,
             from_email=from_email,
