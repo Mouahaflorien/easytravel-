@@ -60,6 +60,7 @@ class Booking(models.Model):
     traveler_email = models.EmailField(blank=True, null=True, verbose_name="Adresse email")
     id_type = models.CharField(max_length=20, choices=ID_TYPE_CHOICES, default='none', verbose_name="Type de pièce")
     id_number = models.CharField(max_length=50, default="", blank=True, null=True, verbose_name="Numéro de la pièce d'identité")
+    companions = models.JSONField(default=list, blank=True, null=True, verbose_name="Accompagnants")
     
     # Détails Réservation & Encaissement
     seats_reserved = models.PositiveIntegerField(default=1)

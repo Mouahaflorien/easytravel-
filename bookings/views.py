@@ -129,6 +129,17 @@ def book_departure(request, departure_id):
                 else:
                     user = current_user
                 
+                # Extraction des accompagnants
+                companions_list = []
+                for i in range(2, seats + 1):
+                    comp_name = request.POST.get(f'traveler_name_{i}', '').strip()
+                    comp_id_type = request.POST.get(f'id_type_{i}', 'none').strip()
+                    if comp_name:
+                        companions_list.append({
+                            'name': comp_name,
+                            'id_type': comp_id_type
+                        })
+                
                 # Création Réservation
                 booking = Booking.objects.create(
                     user=user,
@@ -140,6 +151,7 @@ def book_departure(request, departure_id):
                     traveler_email=clean_email,
                     id_type=id_type_raw,
                     id_number=clean_id_number,
+                    companions=companions_list,
                     seats_reserved=seats,
                     total_amount=segment_price * seats,
                     payment_status='pending',

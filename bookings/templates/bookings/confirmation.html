@@ -281,21 +281,35 @@
                             </h6>
                             <div class="row g-3">
                                 <div class="col-sm-6">
-                                    <span class="text-muted small d-block">Nom du Passager</span>
+                                    <span class="text-muted small d-block">Nom du Passager Principal</span>
                                     <strong class="text-dark fs-5 fw-bold">{{ booking.traveler_name }}</strong>
                                 </div>
                                 <div class="col-sm-6">
                                     <span class="text-muted small d-block">Pièce d'Identité</span>
                                     <strong class="text-dark fs-6">
                                         <span class="badge bg-primary bg-opacity-10 text-primary">{{ booking.get_id_type_display|default:booking.id_type }}</span>
-                                        {{ booking.id_number }}
                                     </strong>
                                 </div>
-                                <div class="col-sm-6">
+                                
+                                {% if booking.companions %}
+                                <div class="col-12 mt-3 mb-2">
+                                    <span class="text-muted small d-block mb-2 border-bottom pb-1">Accompagnants ({{ booking.companions|length }})</span>
+                                    <div class="d-flex flex-column gap-2">
+                                        {% for comp in booking.companions %}
+                                        <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded">
+                                            <strong class="text-dark">{{ comp.name }}</strong>
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ comp.id_type }}</span>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                <div class="col-sm-6 mt-3">
                                     <span class="text-muted small d-block">Téléphone</span>
                                     <strong class="text-dark">{{ booking.traveler_phone|format_phone }}</strong>
                                 </div>
-                                <div class="col-sm-6">
+                                <div class="col-sm-6 mt-3">
                                     <span class="text-muted small d-block">Email de confirmation</span>
                                     <strong class="text-dark">{{ booking.traveler_email }}</strong>
                                 </div>

@@ -571,6 +571,26 @@
                             <label class="form-label fw-bold small text-dark mb-1">Nom Complet <span class="text-danger">*</span></label>
                             <input type="text" name="traveler_name_${i}" class="form-control py-2 rounded-3 bg-white" placeholder="Nom et Prénom du passager" required>
                         </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-dark mb-1">Type de pièce d'identité</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                </span>
+                                <select name="id_type_${i}" class="form-select py-2 border-start-0 bg-white" required>
+                                    <option value="CNI" selected>Carte Nationale d'Identité (CNI)</option>
+                                    <option value="PASSPORT">Passeport</option>
+                                    <option value="RECEIPT">Récépissé</option>
+                                    <option value="none">Aucune pièce</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex mt-2 p-2 bg-warning bg-opacity-10 rounded border border-warning">
+                            <small class="text-dark fw-medium" style="font-size: 0.8rem;">
+                                ⚠️ <strong>Important :</strong> Vous êtes l'unique responsable de votre situation lors des contrôles de police sur le trajet. Assurez-vous d'avoir les pièces nécessaires.
+                            </small>
+                        </div>
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', html);
