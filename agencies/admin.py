@@ -8,8 +8,31 @@ from .importer import import_agency_data
 @admin.register(Agency)
 class AgencyAdmin(admin.ModelAdmin):
     list_display = ('name', 'owner', 'status', 'created_at')
-    list_filter = ('status',)
+    list_filter = ('status', 'theme_mode')
     search_fields = ('name', 'owner__username')
+    
+    fieldsets = (
+        ('Identité de l\'Agence', {
+            'fields': ('name', 'legal_name', 'owner', 'status', 'logo', 'license_number', 'tax_id')
+        }),
+        ('Design & Marque Blanche (Application)', {
+            'description': 'Personnalisez les couleurs et le style visuel de l\'espace de réservation (B2C) pour cette agence.',
+            'fields': ('primary_color', 'theme_mode', 'language')
+        }),
+        ('Paramètres de Réservation & Paiement', {
+            'fields': ('currency', 'vat_rate', 'timezone', 'booking_cutoff_minutes', 'cancellation_deadline_hours', 'platform_fee_percentage')
+        }),
+        ('Paramètres des Billets (PDF & Guichet)', {
+            'description': 'Ces textes apparaîtront en bas des billets imprimés ou PDF.',
+            'fields': ('ticket_terms', 'printer_format', 'date_format', 'time_format')
+        }),
+        ('Matériel & Notifications', {
+            'fields': ('scanner_enabled', 'scale_enabled', 'notify_sms_booking', 'notify_sms_reminder', 'notify_email_ticket', 'notify_agent_sound')
+        }),
+        ('Coordonnées & Support', {
+            'fields': ('phone', 'whatsapp', 'email', 'address')
+        }),
+    )
     
     def get_urls(self):
         urls = super().get_urls()
