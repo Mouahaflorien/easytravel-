@@ -104,19 +104,25 @@ def traveler_register(request):
             if password != password_confirm:
                 raise ValidationError("Les mots de passe saisis ne correspondent pas.")
                 
-            # 3. Validation de l'adresse email
-            clean_email = validate_clean_email(email_raw)
-            if User.objects.filter(email__iexact=clean_email).exists():
-                raise ValidationError("Cette adresse email est déjà associée à un compte EasyTravel.")
-                
-            # 4. Validation stricte du téléphone (Cameroun ou international)
+            # 3. Validation stricte du téléphone (Cameroun ou international)
             clean_phone = validate_cameroon_phone(phone_raw)
+            
+            # 4. Gestion de l'email facultatif
+            no_email = False
+            if not email_raw:
+                # Créer un faux email basé sur le numéro
+                clean_email = f"{clean_phone}@easytravel.cm"
+                no_email = True
+            else:
+                clean_email = validate_clean_email(email_raw)
+                if User.objects.filter(email__iexact=clean_email).exists():
+                    raise ValidationError("Cette adresse email est déjà associée à un compte EasyTravel.")
 
             # 5. Validation rigoureuse de la pièce d'identité (CNI, Passeport, Récépissé)
             clean_id_type, clean_id_number = validate_identity_info(id_type, id_number)
             
-            # Générer un nom d'utilisateur unique
-            username_base = clean_email.split('@')[0]
+            # Générer un nom d'utilisateur unique basé sur le numéro de téléphone ou l'email
+            username_base = clean_phone if no_email else clean_email.split('@')[0]
             username = username_base
             count = 1
             while User.objects.filter(username=username).exists():
@@ -127,7 +133,9 @@ def traveler_register(request):
             first_name = name_parts[0]
             last_name = name_parts[1] if len(name_parts) > 1 else ''
             
-            # Création du compte inactif en attente d'authentification par email
+            # Création du compte
+            # Si pas d'email fourni, le compte est actif immédiatement.
+            # Sinon, il est inactif en attente de validation.
             user = User.objects.create_user(
                 username=username,
                 email=clean_email,
@@ -138,15 +146,23 @@ def traveler_register(request):
                 id_type=clean_id_type,
                 id_number=clean_id_number,
                 role='traveler',
-                is_active=False
+                is_active=no_email
             )
             
-            # Envoi du lien d'activation sécurisé par email avec URL de retour
-            send_account_activation_email(request, user, next_url=next_url)
-            
-            request.session['activation_email'] = clean_email
-            request.session['pending_next_url'] = next_url
-            return redirect(f"{reverse('accounts:activation_pending')}?next={quote(next_url)}")
+            if no_email:
+                # Connexion automatique et redirection
+                login(request, user)
+                messages.success(request, f"Compte créé avec succès ! Bienvenue {user.first_name}.")
+                if next_url and next_url != 'travel:home':
+                    return redirect(next_url)
+                return redirect('accounts:my_bookings')
+            else:
+                # Envoi du lien d'activation sécurisé par email avec URL de retour
+                send_account_activation_email(request, user, next_url=next_url)
+                
+                request.session['activation_email'] = clean_email
+                request.session['pending_next_url'] = next_url
+                return redirect(f"{reverse('accounts:activation_pending')}?next={quote(next_url)}")
             
         except ValidationError as e:
             reg_error = e.message if hasattr(e, 'message') else str(e)

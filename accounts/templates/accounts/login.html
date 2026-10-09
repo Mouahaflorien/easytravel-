@@ -181,9 +181,9 @@
                                 <input type="hidden" name="next" value="{{ next }}">
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold small text-muted">Email ou Nom d'utilisateur</label>
+                                    <label class="form-label fw-semibold small text-muted">Numéro de téléphone, Email ou Identifiant</label>
                                     <input type="text" name="identifier" class="form-control py-2.5 rounded-3" 
-                                           placeholder="contact@exemple.cm ou identifiant" autocomplete="username" required>
+                                           placeholder="699000000 ou email" autocomplete="username" required>
                                 </div>
 
                                 <div class="mb-4">
@@ -214,7 +214,7 @@
                         <div class="tab-pane fade {% if active_tab == 'register' %}show active{% endif %}" id="register-pane" role="tabpanel">
                             <div class="text-center mb-4">
                                 <h4 class="fw-bold text-dark mb-1">Nouveau voyageur</h4>
-                                <p class="text-muted small">Créez votre profil officiel — vérification par email requise</p>
+                                <p class="text-muted small">Créez votre profil officiel pour centraliser vos réservations</p>
                             </div>
 
                             {% if reg_error %}
@@ -240,10 +240,10 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold small text-muted">Adresse Email (pour recevoir vos billets) <span class="text-danger">*</span></label>
+                                    <label class="form-label fw-semibold small text-muted">Adresse Email <span class="fw-normal text-muted">(Facultatif)</span></label>
                                     <input type="email" name="email" id="regEmail" class="form-control py-2.5 rounded-3" 
-                                           placeholder="votre.email@domaine.com" value="{{ reg_data.email }}" autocomplete="email" required>
-                                    <small class="text-muted" style="font-size: 0.75rem;">Un lien d'activation sécurisé vous sera envoyé à cette adresse.</small>
+                                           placeholder="votre.email@domaine.com" value="{{ reg_data.email }}" autocomplete="email">
+                                    <small class="text-muted" style="font-size: 0.75rem;">Si vous laissez ce champ vide, votre compte sera activé immédiatement via votre numéro de téléphone.</small>
                                 </div>
 
                                 <div class="mb-3">
