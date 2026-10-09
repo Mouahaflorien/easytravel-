@@ -215,43 +215,47 @@ def validate_identity_info(id_type, id_number):
     - CNI : Carte Nationale d'Identité camerounaise (9 à 11 caractères, au moins 70% de chiffres, anti-fraude)
     - PASSPORT : Passeport officiel (7 à 12 caractères alphanumériques, mélange lettres et chiffres, anti-fraude)
     - RECEIPT : Récépissé d'identité officiel délivré par la DGSN (8 à 16 caractères alphanumériques, anti-fraude)
+    - STUDENT : Carte d'étudiant
+    - OTHER : Autre ou aucune pièce (aucune validation stricte du numéro requise)
     """
-    valid_types = ['CNI', 'PASSPORT', 'RECEIPT']
+    valid_types = ['CNI', 'PASSPORT', 'RECEIPT', 'STUDENT', 'OTHER']
     if id_type not in valid_types:
-        raise ValidationError("Type de pièce d'identité invalide. Choisissez CNI, Passeport ou Récépissé.")
+        raise ValidationError("Type de pièce d'identité invalide. Choisissez CNI, Passeport, Récépissé, Étudiant ou Autre.")
+
+    if id_type == 'OTHER':
+        # Si c'est autre/sans pièce, on accepte un numéro vide ou n'importe quoi (nettoyé)
+        return id_type, str(id_number).strip().upper() if id_number else "N/A"
 
     if not id_number:
-        raise ValidationError("Le numéro de pièce d'identité est obligatoire pour voyager.")
+        raise ValidationError("Le numéro de la pièce d'identité (ou Matricule) est obligatoire.")
 
     raw = str(id_number).strip().upper()
     # Nettoyer les espaces et tirets
     clean = re.sub(r'[\s\-]', '', raw)
 
-    if len(clean) < 6:
-        raise ValidationError("Le numéro de pièce d'identité est trop court (au moins 6 caractères requis).")
+    if len(clean) < 4:
+        raise ValidationError("Le numéro saisi est trop court (au moins 4 caractères requis).")
     if len(clean) > 20:
-        raise ValidationError("Le numéro de pièce d'identité est trop long (maximum 20 caractères).")
-
-    # Vérification des caractères alphanumériques uniquement
-    if not re.match(r'^[A-Z0-9]+$', clean):
-        raise ValidationError("Le numéro de pièce d'identité ne doit contenir que des chiffres et des lettres majuscules.")
+        raise ValidationError("Le numéro saisi est trop long (maximum 20 caractères).")
 
     # Vérification anti-fraude / anti-valeurs factices
     lower_clean = clean.lower()
     for forbidden in FORBIDDEN_NAME_PATTERNS:
         if forbidden in lower_clean:
-            raise ValidationError(f"Numéro de pièce d'identité invalide ('{forbidden}' détecté). Veuillez renseigner votre véritable numéro officiel.")
+            raise ValidationError(f"Numéro invalide ('{forbidden}' détecté). Veuillez renseigner votre véritable numéro officiel.")
 
     # Vérification anti-répétition pure (ex: '00000000', '11111111', 'AAAAAAAA')
     if len(set(clean)) < 3:
-        raise ValidationError("Numéro de pièce d'identité invalide : suite de caractères répétitifs non autorisée.")
+        raise ValidationError("Numéro invalide : suite de caractères répétitifs non autorisée.")
 
     # Vérification des suites consécutives triviales (ex: '12345678', '98765432')
     digits_only = re.sub(r'\D', '', clean)
     if digits_only in ('12345678', '123456789', '1234567890', '987654321', '012345678'):
-        raise ValidationError("Numéro de pièce d'identité invalide : séquence numérique fictive détectée.")
+        raise ValidationError("Numéro invalide : séquence numérique fictive détectée.")
 
     if id_type == 'CNI':
+        if not re.match(r'^[A-Z0-9]+$', clean):
+            raise ValidationError("Le numéro de CNI ne doit contenir que des chiffres et des lettres majuscules.")
         # La CNI camerounaise moderne comporte 9 à 11 chiffres (parfois précédés d'une lettre de région comme CE)
         if len(clean) < 8 or len(clean) > 13:
             raise ValidationError("Le numéro de CNI doit comporter entre 8 et 12 caractères (ex: 102938475 ou 1102938475).")
@@ -261,6 +265,8 @@ def validate_identity_info(id_type, id_number):
             raise ValidationError("Le numéro de CNI doit être composé principalement de chiffres (ex: 102938475).")
 
     elif id_type == 'PASSPORT':
+        if not re.match(r'^[A-Z0-9]+$', clean):
+            raise ValidationError("Le numéro de passeport ne doit contenir que des chiffres et des lettres majuscules.")
         # Un passeport standard comporte entre 7 et 10 caractères et contient généralement des lettres et des chiffres
         if len(clean) < 7 or len(clean) > 12:
             raise ValidationError("Le numéro de passeport doit comporter entre 7 et 10 caractères (ex: A1234567 ou 09AA12345).")
@@ -270,9 +276,16 @@ def validate_identity_info(id_type, id_number):
             raise ValidationError("Le numéro de passeport doit comporter la série de lettres et les chiffres officiels (ex: A1234567).")
 
     elif id_type == 'RECEIPT':
+        if not re.match(r'^[A-Z0-9]+$', clean):
+            raise ValidationError("Le numéro de récépissé ne doit contenir que des chiffres et des lettres majuscules.")
         # Récépissé de CNI : délivré par la police / DGSN
         if len(clean) < 8 or len(clean) > 16:
             raise ValidationError("Le numéro de récépissé doit comporter entre 8 et 16 caractères (ex: REC20260987 ou 1029384756).")
+            
+    elif id_type == 'STUDENT':
+        # Les cartes d'étudiant peuvent avoir des formats très variés (matricule universitaire, etc.)
+        if len(clean) < 4 or len(clean) > 20:
+            raise ValidationError("Le matricule d'étudiant/élève doit comporter entre 4 et 20 caractères.")
 
     return id_type, clean
 

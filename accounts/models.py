@@ -12,6 +12,8 @@ class User(AbstractUser):
         ('CNI', "Carte Nationale d'Identité (CNI)"),
         ('PASSPORT', "Passeport"),
         ('RECEIPT', "Récépissé de CNI"),
+        ('STUDENT', "Carte d'étudiant / d'élève"),
+        ('OTHER', "Autre (Aucune pièce officielle)"),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='traveler')
     email = models.EmailField('email address', unique=True)

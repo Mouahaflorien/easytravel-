@@ -268,10 +268,12 @@
                                             <option value="CNI" {% if reg_data.id_type == 'CNI' %}selected{% endif %}>CNI</option>
                                             <option value="PASSPORT" {% if reg_data.id_type == 'PASSPORT' %}selected{% endif %}>Passeport</option>
                                             <option value="RECEIPT" {% if reg_data.id_type == 'RECEIPT' %}selected{% endif %}>Récépissé</option>
+                                            <option value="STUDENT" {% if reg_data.id_type == 'STUDENT' %}selected{% endif %}>Carte d'étudiant / d'élève</option>
+                                            <option value="OTHER" {% if reg_data.id_type == 'OTHER' %}selected{% endif %}>Autre (Sans pièce)</option>
                                         </select>
                                     </div>
                                     <div class="col-12 col-sm-7">
-                                        <label class="form-label fw-semibold small text-muted">Numéro de la pièce <span class="text-danger">*</span></label>
+                                        <label class="form-label fw-semibold small text-muted">Numéro de la pièce <span class="text-danger" id="regIdAsterisk">*</span></label>
                                         <input type="text" name="id_number" id="regIdNumber" class="form-control py-2.5 rounded-3 text-uppercase" 
                                                placeholder="Ex: 1102938475" value="{{ reg_data.id_number }}" required>
                                     </div>
@@ -345,6 +347,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateIdHelp() {
         if (!idTypeSelect || !idNumberInput || !idHelp) return;
         const type = idTypeSelect.value;
+        const asterisk = document.getElementById('regIdAsterisk');
+        
+        if (type === 'OTHER') {
+            idNumberInput.required = false;
+            if(asterisk) asterisk.style.display = 'none';
+        } else {
+            idNumberInput.required = true;
+            if(asterisk) asterisk.style.display = 'inline';
+        }
+
         if (type === 'CNI') {
             idNumberInput.placeholder = 'Ex: 102938475';
             idHelp.textContent = 'CNI officielle : 9 à 11 caractères principalement numériques (ex: 102938475).';
@@ -354,6 +366,12 @@ document.addEventListener('DOMContentLoaded', function() {
         } else if (type === 'RECEIPT') {
             idNumberInput.placeholder = 'Ex: REC20260987 ou 1029384756';
             idHelp.textContent = 'Récépissé officiel délivré par la DGSN (au moins 8 caractères).';
+        } else if (type === 'STUDENT') {
+            idNumberInput.placeholder = 'Ex: 18J342';
+            idHelp.textContent = 'Matricule d\'étudiant ou d\'élève.';
+        } else if (type === 'OTHER') {
+            idNumberInput.placeholder = 'Facultatif';
+            idHelp.textContent = 'Aucune pièce officielle n\'est requise (facultatif).';
         }
     }
 
