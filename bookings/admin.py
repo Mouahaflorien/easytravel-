@@ -34,7 +34,27 @@ class BookingAdmin(admin.ModelAdmin):
         }),
     )
     
-    actions = ['send_reminders', 'send_survey', 'cancel_and_refund']
+    actions = ['send_reminders', 'send_survey', 'cancel_and_refund', 'send_ticket_email']
+
+    @admin.action(description="Envoyer l'e-mail de confirmation (Billet) au(x) passager(s)")
+    def send_ticket_email(self, request, queryset):
+        from accounts.services.email_service import send_ticket_confirmation_email
+        count_success = 0
+        count_failed = 0
+        
+        for booking in queryset:
+            if booking.traveler_email and booking.payment_status == 'paid':
+                if send_ticket_confirmation_email(request, booking):
+                    count_success += 1
+                else:
+                    count_failed += 1
+            else:
+                count_failed += 1
+                
+        if count_success > 0:
+            self.message_user(request, f"{count_success} e-mail(s) de billet(s) envoyé(s) avec succès.", level='SUCCESS')
+        if count_failed > 0:
+            self.message_user(request, f"{count_failed} réservation(s) ignorée(s) (pas d'e-mail ou non payée/SMTP non configuré).", level='WARNING')
 
     @admin.action(description="Annuler la réservation et créditer le portefeuille du client")
     def cancel_and_refund(self, request, queryset):
