@@ -268,3 +268,16 @@ def my_bookings(request):
         'bookings': bookings
     })
 
+import logging
+from django.contrib.auth import views as auth_views
+
+logger = logging.getLogger(__name__)
+
+class CustomPasswordResetView(auth_views.PasswordResetView):
+    def form_valid(self, form):
+        try:
+            return super().form_valid(form)
+        except Exception as e:
+            logger.error(f"Erreur d'envoi d'email de reinitialisation: {e}")
+            messages.error(self.request, "Impossible d'envoyer l'e-mail. Le serveur mail n'est pas configuré correctement. Veuillez contacter le support technique.")
+            return super().form_invalid(form)
