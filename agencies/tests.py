@@ -8,8 +8,8 @@ User = get_user_model()
 class AgencyTenantTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
-        self.user1 = User.objects.create_user(username='boss1', password='pw')
-        self.user2 = User.objects.create_user(username='boss2', password='pw')
+        self.user1 = User.objects.create_user(username='boss1', password='pw', email='boss1@test.cm')
+        self.user2 = User.objects.create_user(username='boss2', password='pw', email='boss2@test.cm')
         self.agency1 = Agency.objects.create(name='FINEX TEST', owner=self.user1)
         self.agency2 = Agency.objects.create(name='GENERAL TEST', owner=self.user2)
 

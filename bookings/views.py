@@ -107,6 +107,7 @@ def book_departure(request, departure_id):
                     generated_password = ''.join(random.choices(string.ascii_letters + string.digits, k=6))
                     
                     user = User.objects.create_user(
+                        username=clean_phone,
                         phone=clean_phone,
                         password=generated_password,
                         first_name=clean_name.split()[0],
@@ -114,7 +115,7 @@ def book_departure(request, departure_id):
                         email=clean_email,
                         id_type=id_type_raw,
                         id_number=clean_id_number,
-                        is_active=False
+                        is_active=True
                     )
                     
                     # Remplacement Email -> WhatsApp pour l'activation
@@ -161,7 +162,7 @@ def book_departure(request, departure_id):
                 departure.available_capacity -= seats
                 departure.save()
                 
-                return redirect(reverse('bookings:checkout', args=[booking.reference]))
+                return redirect(reverse('payments:initiate', args=[booking.id]))
                 
         except ValidationError as e:
             error = e.message

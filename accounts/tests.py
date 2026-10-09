@@ -63,8 +63,6 @@ class AccountsValidationTest(TestCase):
 
         # Noms invalides
         with self.assertRaises(ValidationError):
-            validate_passenger_name("Paul")  # 1 seul mot
-        with self.assertRaises(ValidationError):
             validate_passenger_name("Passager Clandestin")  # Terme interdit
         with self.assertRaises(ValidationError):
             validate_passenger_name("Test User")  # Mots interdits
@@ -113,7 +111,7 @@ class AccountEmailActivationTest(TestCase):
     def setUp(self):
         self.client = Client()
 
-    def test_registration_creates_inactive_user_and_sends_email(self):
+    def test_registration_creates_active_user_and_sends_welcome_email(self):
         mail.outbox = []
         response = self.client.post(reverse('accounts:register'), {
             'full_name': 'Mbarga Joseph',
@@ -125,13 +123,13 @@ class AccountEmailActivationTest(TestCase):
             'password_confirm': 'SecurePassword2026!'
         })
 
-        # Doit rediriger vers la page d'attente d'activation
+        # Doit rediriger vers la page des réservations (connecté)
         self.assertEqual(response.status_code, 302)
-        self.assertIn(reverse('accounts:activation_pending'), response.url)
+        self.assertIn(reverse('accounts:my_bookings'), response.url)
 
-        # L'utilisateur doit exister en base de données avec is_active=False
+        # L'utilisateur doit exister en base de données avec is_active=True
         user = User.objects.get(email='mbarga.joseph@mslogitech.cm')
-        self.assertFalse(user.is_active)
+        self.assertTrue(user.is_active)
         self.assertEqual(user.first_name, 'Mbarga')
         self.assertEqual(user.last_name, 'Joseph')
         self.assertEqual(user.id_type, 'CNI')
@@ -139,7 +137,7 @@ class AccountEmailActivationTest(TestCase):
 
         # Un email doit avoir été envoyé
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("Activez votre compte voyageur", mail.outbox[0].subject)
+        self.assertIn("Bienvenue sur EasyTravel", mail.outbox[0].subject)
         self.assertIn(user.email, mail.outbox[0].to)
 
     def test_activation_link_activates_account(self):

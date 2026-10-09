@@ -6,7 +6,7 @@ Uses unittest.mock to guarantee 100% network isolation.
 
 from unittest.mock import patch, MagicMock
 from datetime import date, time
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
 from accounts.models import User
 from agencies.models import Agency
@@ -26,7 +26,7 @@ class CinetPayPaymentTests(TestCase):
             email='jean.kamga@test.cm',
             phone='699001122'
         )
-        self.owner = User.objects.create_user(username='agency_admin', password='password')
+        self.owner = User.objects.create_user(username='agency_admin', password='password', email='agency_admin@test.cm')
         self.agency = Agency.objects.create(name="Cameroon Express", owner=self.owner)
         self.city_douala = City.objects.create(name="Douala")
         self.city_yaounde = City.objects.create(name="Yaoundé")
@@ -154,8 +154,10 @@ class CinetPayPaymentTests(TestCase):
             self.assertEqual(response.status_code, 302)
             self.assertEqual(response.url, "https://checkout.cinetpay.com/pay/xyz789")
 
+    @override_settings(PAYMENT_SIMULATION_MODE=True)
     def test_view_initiate_redirects_to_simulation(self):
         """When simulation mode is enabled, initiate view redirects to sandbox checkout."""
+        self.client.login(username='voyageur_test', password='secretpassword123')
         url = reverse('payments:initiate', kwargs={'booking_id': self.booking.id})
         response = self.client.get(url)
 
@@ -165,6 +167,7 @@ class CinetPayPaymentTests(TestCase):
 
     def test_simulation_checkout_view(self):
         """Simulation checkout view renders properly with booking details."""
+        self.client.login(username='voyageur_test', password='secretpassword123')
         url = reverse('payments:simulation_checkout', kwargs={'booking_id': self.booking.id})
         response = self.client.get(url)
 
@@ -173,8 +176,10 @@ class CinetPayPaymentTests(TestCase):
         self.assertContains(response, "MTN Mobile Money")
         self.assertContains(response, "Orange Money")
 
+    @override_settings(PAYMENT_SIMULATION_MODE=True)
     def test_simulation_process_success(self):
         """Simulation process handles successful payment and updates booking to paid."""
+        self.client.login(username='voyageur_test', password='secretpassword123')
         url = reverse('payments:simulation_process', kwargs={'booking_id': self.booking.id})
         response = self.client.post(url, data={
             'action': 'success',
@@ -192,8 +197,10 @@ class CinetPayPaymentTests(TestCase):
         self.assertTrue(self.booking.transaction_id.startswith('SIM-TX-'))
         self.assertIsNotNone(self.booking.paid_at)
 
+    @override_settings(PAYMENT_SIMULATION_MODE=True)
     def test_simulation_process_failure(self):
         """Simulation process handles failed payment attempt and marks status as failed."""
+        self.client.login(username='voyageur_test', password='secretpassword123')
         url = reverse('payments:simulation_process', kwargs={'booking_id': self.booking.id})
         response = self.client.post(url, data={
             'action': 'fail',
