@@ -134,8 +134,7 @@ def traveler_register(request):
             last_name = name_parts[1] if len(name_parts) > 1 else ''
             
             # Création du compte
-            # Si pas d'email fourni, le compte est actif immédiatement.
-            # Sinon, il est inactif en attente de validation.
+            # Le compte est toujours actif (suppression de la double authentification)
             user = User.objects.create_user(
                 username=username,
                 email=clean_email,
@@ -146,23 +145,33 @@ def traveler_register(request):
                 id_type=clean_id_type,
                 id_number=clean_id_number,
                 role='traveler',
-                is_active=no_email
+                is_active=True
             )
             
-            if no_email:
-                # Connexion automatique et redirection
-                login(request, user)
-                messages.success(request, f"Compte créé avec succès ! Bienvenue {user.first_name}.")
-                if next_url and next_url != 'travel:home':
-                    return redirect(next_url)
-                return redirect('accounts:my_bookings')
-            else:
-                # Envoi du lien d'activation sécurisé par email avec URL de retour
-                send_account_activation_email(request, user, next_url=next_url)
-                
-                request.session['activation_email'] = clean_email
-                request.session['pending_next_url'] = next_url
-                return redirect(f"{reverse('accounts:activation_pending')}?next={quote(next_url)}")
+            # Connexion automatique
+            login(request, user)
+            
+            if not no_email:
+                # Tenter d'envoyer un email de bienvenue de manière sécurisée (sans faire planter le site)
+                try:
+                    # Remplacé: send_account_activation_email(request, user, next_url=next_url)
+                    from django.core.mail import send_mail
+                    from django.conf import settings
+                    send_mail(
+                        'Bienvenue sur EasyTravel !',
+                        f'Bonjour {user.first_name},\n\nVotre compte a été créé avec succès. Vous pouvez maintenant réserver vos billets.',
+                        settings.DEFAULT_FROM_EMAIL,
+                        [clean_email],
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    print(f"Erreur d'envoi d'email de bienvenue: {e}")
+                    
+            messages.success(request, f"Compte créé avec succès ! Bienvenue {user.first_name}.")
+            
+            if next_url and next_url != 'travel:home':
+                return redirect(next_url)
+            return redirect('accounts:my_bookings')
             
         except ValidationError as e:
             reg_error = e.message if hasattr(e, 'message') else str(e)
