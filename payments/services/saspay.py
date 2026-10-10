@@ -74,7 +74,8 @@ class SasPayService:
             "customer_email": customer_email,
             "return_url": return_url,
             "metadata": {
-                "transaction_id": transaction_id
+                "transaction_id": transaction_id,
+                "project": getattr(settings, 'SASPAY_PROJECT_ID', 'easytravel')
             }
         }
         

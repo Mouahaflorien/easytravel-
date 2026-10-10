@@ -271,6 +271,15 @@ def saspay_notification(request):
         return JsonResponse({"status": "ignored"}, status=200)
 
     payload_data = data.get('data', {})
+    
+    # PROJECT FILTERING
+    # If the merchant has multiple projects, ignore webhooks not meant for us
+    expected_project_id = getattr(settings, 'SASPAY_PROJECT_ID', 'easytravel')
+    incoming_project_id = payload_data.get('metadata', {}).get('project')
+    if incoming_project_id and incoming_project_id != expected_project_id:
+        logger.info(f"SasPay Webhook ignoré (projet: {incoming_project_id}, attendu: {expected_project_id})")
+        return HttpResponse('Ignored', status=200)
+
     updated, booking, message = service.verify_and_update_booking_webhook(payload_data)
 
     if updated and booking and event == 'transaction.success':
