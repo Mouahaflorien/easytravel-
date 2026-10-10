@@ -12,7 +12,7 @@ urlpatterns = [
     path('payer-panier/<int:cart_id>/', views.initiate_cart_payment, name='initiate_cart'),
     path('simulation/<int:booking_id>/', views.simulation_checkout, name='simulation_checkout'),
     path('simulation/<int:booking_id>/process/', views.simulation_process, name='simulation_process'),
-    path('cinetpay/notification/', views.cinetpay_notification, name='notification'),
-    path('cinetpay/retour/', views.cinetpay_return, name='return'),
+    path('saspay/notification/', views.saspay_notification, name='notification'),
+    path('saspay/retour/', views.saspay_return, name='return'),
 ]
 

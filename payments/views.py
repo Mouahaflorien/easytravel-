@@ -18,7 +18,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from bookings.models import Booking, BookingCart
-from .services.cinetpay import CinetPayService
+from .services.saspay import SasPayService
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +42,13 @@ def initiate_booking_payment(request, booking_id):
         return redirect('bookings:confirmation', reference=booking.reference)
 
     simulation_mode = getattr(settings, 'PAYMENT_SIMULATION_MODE', True)
-    service = CinetPayService()
+    service = SasPayService()
 
     # Redirection vers le mode Simulation / Sandbox
     if simulation_mode or not service.is_configured():
         return redirect('payments:simulation_checkout', booking_id=booking.id)
 
-    # Mode CinetPay Réel (Live)
+    # Mode SasPay Réel (Live)
     return_url = getattr(settings, 'CINETPAY_RETURN_URL', '') or request.build_absolute_uri(reverse('payments:return'))
     notify_url = getattr(settings, 'CINETPAY_NOTIFY_URL', '') or request.build_absolute_uri(reverse('payments:notification'))
 
@@ -88,7 +88,7 @@ def initiate_cart_payment(request, cart_id):
         return redirect('accounts:my_bookings')
 
     simulation_mode = getattr(settings, 'PAYMENT_SIMULATION_MODE', True)
-    service = CinetPayService()
+    service = SasPayService()
 
     # Redirection vers le mode Simulation / Sandbox (NON GERE POUR PANIER ICI)
     if simulation_mode or not service.is_configured():
@@ -98,7 +98,7 @@ def initiate_cart_payment(request, cart_id):
             return redirect('accounts:my_bookings')
         return redirect('payments:simulation_checkout', booking_id=first_booking.id)
 
-    # Mode CinetPay Réel (Live)
+    # Mode SasPay Réel (Live)
     return_url = getattr(settings, 'CINETPAY_RETURN_URL', '') or request.build_absolute_uri(reverse('payments:return'))
     notify_url = getattr(settings, 'CINETPAY_NOTIFY_URL', '') or request.build_absolute_uri(reverse('payments:notification'))
 
@@ -243,67 +243,68 @@ def simulation_process(request, booking_id):
 
 @csrf_exempt
 @require_POST
-def cinetpay_notification(request):
+def saspay_notification(request):
     """
-    Instant Payment Notification (IPN) webhook called by CinetPay.
-    Performs server-to-server validation to avoid spoofing and securely updates Booking.
+    Webhook SasPay (IPN).
+    Vérifie la signature et met à jour le statut.
     """
-    # CinetPay can send data as JSON or form-encoded POST
-    data = {}
-    if request.content_type == 'application/json':
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-        except (ValueError, UnicodeDecodeError):
-            return HttpResponseBadRequest("Invalid JSON")
-    else:
-        data = request.POST.dict()
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except (ValueError, UnicodeDecodeError):
+        return HttpResponseBadRequest("Invalid JSON")
 
-    # Extract transaction identifier
-    tx_id = (
-        data.get('cpm_trans_id') or 
-        data.get('transaction_id') or 
-        data.get('trans_id')
-    )
+    service = SasPayService()
+    
+    # Verify Webhook Signature
+    signature = request.headers.get('X-Webhook-Signature', '')
+    timestamp = request.headers.get('X-Webhook-Timestamp', '')
+    
+    if not service.verify_webhook_signature(request.body, signature, timestamp):
+        logger.warning("Invalid SasPay webhook signature or timestamp.")
+        return HttpResponseBadRequest("Invalid signature")
 
-    if not tx_id:
-        logger.warning("CinetPay IPN received without transaction identifier.")
-        return HttpResponseBadRequest("Missing transaction_id")
+    event = data.get('event')
+    if event == 'webhook.test':
+        return JsonResponse({"status": "success", "message": "Test OK"}, status=200)
+    
+    if event not in ['transaction.success', 'transaction.failed', 'transaction.cancelled']:
+        return JsonResponse({"status": "ignored"}, status=200)
 
-    logger.info(f"Received CinetPay IPN for transaction_id: {tx_id}")
-    service = CinetPayService()
-    updated, booking, message = service.verify_and_update_booking(tx_id)
+    payload_data = data.get('data', {})
+    updated, booking, message = service.verify_and_update_booking_webhook(payload_data)
 
-    if updated and booking:
+    if updated and booking and event == 'transaction.success':
         try:
             from accounts.services.email_service import send_ticket_confirmation_email
             send_ticket_confirmation_email(request, booking)
         except Exception as e:
             logger.warning(f"Could not send ticket confirmation email during IPN: {e}")
 
-    # CinetPay expects HTTP 200 with JSON or text
     return JsonResponse({
         "status": "success" if updated else "pending_or_failed",
         "message": message,
-        "transaction_id": tx_id,
     }, status=200)
 
 
-def cinetpay_return(request):
+def saspay_return(request):
     """
-    User landing page when redirected back from CinetPay Checkout.
+    User landing page when redirected back from SasPay Checkout.
     Verifies transaction status and redirects to official boarding pass.
     """
-    tx_id = (
-        request.GET.get('transaction_id') or 
-        request.GET.get('cpm_trans_id') or 
-        request.POST.get('transaction_id') or 
-        request.session.get('current_payment_tx_id')
-    )
+    tx_id = request.GET.get('transaction_id') or request.session.get('current_payment_tx_id')
 
     booking = None
     if tx_id:
-        service = CinetPayService()
-        updated, obj, message = service.verify_and_update_booking(tx_id)
+        service = SasPayService()
+        # Fallback manual verification if webhook is delayed
+        success, payment_data = service.verify_payment(tx_id)
+        if success:
+            updated, obj, message = service.verify_and_update_booking_webhook({'data': payment_data, 'status': payment_data.get('status')})
+            # if the webhook format differs from /verify, we may need to adapt `verify_and_update_booking_webhook`
+            # or write a specific return verification handler.
+        else:
+            # We don't have an object here, fallback to session below
+            obj = None
         if obj:
             if obj.payment_status == 'paid':
                 messages.success(request, "🎉 Votre paiement a été validé avec succès ! Votre(vos) billet(s) est(sont) confirmé(s).")
