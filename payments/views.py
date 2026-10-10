@@ -273,6 +273,13 @@ def cinetpay_notification(request):
     service = CinetPayService()
     updated, booking, message = service.verify_and_update_booking(tx_id)
 
+    if updated and booking:
+        try:
+            from accounts.services.email_service import send_ticket_confirmation_email
+            send_ticket_confirmation_email(request, booking)
+        except Exception as e:
+            logger.warning(f"Could not send ticket confirmation email during IPN: {e}")
+
     # CinetPay expects HTTP 200 with JSON or text
     return JsonResponse({
         "status": "success" if updated else "pending_or_failed",
