@@ -308,7 +308,7 @@ def saspay_return(request):
         # Fallback manual verification if webhook is delayed
         success, payment_data = service.verify_payment(tx_id)
         if success:
-            updated, obj, message = service.verify_and_update_booking_webhook({'data': payment_data, 'status': payment_data.get('status')})
+            updated, obj, message = service.verify_and_update_booking_webhook(payment_data)
             # if the webhook format differs from /verify, we may need to adapt `verify_and_update_booking_webhook`
             # or write a specific return verification handler.
         else:

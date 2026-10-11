@@ -92,6 +92,9 @@ class SasPayService:
         except requests.exceptions.RequestException as e:
             logger.exception("Exception réseau lors de la création SasPay checkout")
             return False, {"message": str(e)}
+        except Exception as e:
+            logger.exception("Exception inattendue lors de l'appel SasPay")
+            return False, {"message": str(e)}
 
     def verify_payment(self, payment_id):
         try:
